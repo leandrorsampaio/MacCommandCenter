@@ -117,7 +117,9 @@ struct AdvancedSettingsView: View {
                     ))
                 if model.server.isRunning {
                     LabeledContent("Listening on") {
-                        Text("127.0.0.1:\(model.server.port)").monospaced()
+                        // String(port), not interpolation: SwiftUI would group the digits
+                        // by locale and render the port as "8.787".
+                        Text("127.0.0.1:" + String(model.server.port)).monospaced()
                     }
                 }
                 if let error = model.server.lastError {

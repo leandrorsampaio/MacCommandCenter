@@ -99,6 +99,9 @@ view was captured and inspected instead of reasoned about:
 
 - The inline **Off** button overflowed the panel's right edge. The push-button style forces
   full width, which is right for a bar and wrong beside other content.
+- The control API address rendered as **`127.0.0.1:8.787`**. SwiftUI runs an interpolated
+  integer through the locale's number formatter, so the port was shown with digit
+  grouping — an address that is simply wrong. The shell timeout label had the same fault.
 - `cornerRadius` reached only the bevel stroke, so a skin that set it and turned bevels off
   — the shipped **Midnight** does exactly that — got square corners on every surface.
   Every skinned surface now clips to it.

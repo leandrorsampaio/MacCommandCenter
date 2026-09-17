@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Writing a skin
+    url: https://github.com/leandrorsampaio/MacCommandCenter/blob/main/docs/SKINS.md
+    about: Every colour, metric, font role and effect a skin can set.
+  - name: Writing a config
+    url: https://github.com/leandrorsampaio/MacCommandCenter/blob/main/docs/CONFIGS.md
+    about: The config format and all three action types.
+  - name: Buttons, Shortcuts and hardware
+    url: https://github.com/leandrorsampaio/MacCommandCenter/blob/main/docs/AUTOMATION.md
+    about: Including the macro-pad path that needs no code at all.

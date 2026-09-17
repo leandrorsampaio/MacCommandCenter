@@ -97,7 +97,7 @@ struct ButtonDetailView: View {
                         ))
                     Spacer()
                     Stepper(
-                        "Timeout \(Int(shell.timeout))s",
+                        "Timeout " + String(Int(shell.timeout)) + "s",
                         value: Binding(
                             get: { shell.timeout },
                             set: {

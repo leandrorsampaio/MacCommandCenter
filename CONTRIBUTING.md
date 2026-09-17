@@ -76,6 +76,13 @@ Before adding one of these, know that it was looked at and turned down for a rea
   `AudioObjectSetPropertyData` with `kAudioHardwarePropertyDefaultOutputDevice` is public
   and works under the sandbox. It was left out only because nobody asked for it, not
   because it cannot be done. It would be a reasonable first contribution.
+- **Auto-update for the direct build.** Sparkle is the obvious answer and it is a
+  third-party dependency, which this project does not take. Until there is a better
+  option, direct users update by downloading a new DMG; a Homebrew cask would be a
+  reasonable contribution.
+- **Localisation.** The app is English-only. Nothing blocks translating it — the strings
+  are ordinary literals — but half-translating a UI is worse than not starting, so it is
+  all or nothing.
 - **Skinnable icons.** Icons come from the *config*, not the skin, because the config is
   what knows what a button means. Letting a skin override them would mean a skin deciding
   that "Keep Awake" looks like a sun, which is the config author's call.
