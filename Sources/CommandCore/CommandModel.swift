@@ -27,9 +27,7 @@ public struct CommandID: RawRepresentable, Hashable, Sendable, Codable,
 public enum CommandKind: String, Codable, Sendable {
     /// Fire and forget (no lasting state).
     case action
-    /// A single on/off state.
-    case toggle
-    /// Several mutually exclusive states, plus "off".
+    /// One or more mutually exclusive states, plus "off".
     case mode
 }
 

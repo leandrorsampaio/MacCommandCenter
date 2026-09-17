@@ -68,7 +68,7 @@ Points. Each is clamped, so a bad number cannot make the panel unusable.
 | `bevel` | 2 | Bevel thickness. `0` gives a flat, modern skin |
 | `cornerRadius` | 0 | `0` is the 1997 look |
 | `tileHeight` | 142 | Height of a command button |
-| `titlebarHeight` | 20 | `0` removes the titlebar |
+| `titlebarHeight` | 20 | `0` removes the titlebar; close and settings move to a small row at the foot of the panel |
 | `readoutPadding` | 9 | Inset inside the LCD |
 | `ledSize` | 8 | Lamp diameter |
 | `glowRadius` | 7 | Bloom on lit elements |

@@ -298,3 +298,58 @@ struct ConsentStoreTests {
         #expect(!store.isApproved(action))
     }
 }
+
+struct DuplicateIDTests {
+
+    private func config(commands: [ConfigCommand]) -> AppConfig {
+        AppConfig(
+            id: "x",
+            name: "Sample",
+            groups: [ConfigGroup(id: "g", title: "G", commands: commands)]
+        )
+    }
+
+    private func command(id: String, optionIDs: [String]) -> ConfigCommand {
+        ConfigCommand(
+            id: id,
+            title: id,
+            icon: "circle",
+            options: optionIDs.map {
+                ConfigOption(
+                    id: $0, title: $0, icon: "circle", action: .keepAwake(mode: .systemOnly))
+            }
+        )
+    }
+
+    @Test func cleanConfigsReportNothing() {
+        let sample = config(commands: [
+            command(id: "a", optionIDs: ["one", "two"]),
+            command(id: "b", optionIDs: ["one"]),
+        ])
+
+        #expect(ConfigCatalog.duplicateIDProblems(in: sample).isEmpty)
+    }
+
+    /// A repeated command id used to replace the earlier one in the registry without a
+    /// word, leaving a button on screen that did nothing.
+    @Test func repeatedCommandIDsAreReported() {
+        let sample = config(commands: [
+            command(id: "a", optionIDs: ["one"]),
+            command(id: "a", optionIDs: ["two"]),
+        ])
+
+        let problems = ConfigCatalog.duplicateIDProblems(in: sample)
+
+        #expect(problems.count == 1)
+        #expect(problems[0].contains("'a'"))
+    }
+
+    @Test func repeatedOptionIDsAreReported() {
+        let sample = config(commands: [command(id: "a", optionIDs: ["one", "one"])])
+
+        let problems = ConfigCatalog.duplicateIDProblems(in: sample)
+
+        #expect(problems.count == 1)
+        #expect(problems[0].contains("'one'"))
+    }
+}

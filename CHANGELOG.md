@@ -92,6 +92,22 @@ Following two external reviews (`review_claude_fable_5_1.md`, `review_gemini_3_8
 - The panel could restore off-screen — a saved frame of `y = -154` left no way to drag it
   back. Frames are now clamped to the visible screen.
 
+### Changed
+
+- The panel **scrolls** when a config has more buttons than the display has room for.
+  Previously the window was clamped to the screen and the rest was simply clipped, with no
+  way to reach it.
+- A skin that sets `titlebarHeight: 0` — the shipped **Midnight** does — now gets a small
+  close and settings row at the foot of the panel, instead of having no controls at all.
+- Switching configs in the editor with unsaved edits asks before discarding them.
+- Duplicate command and button ids in a config are reported in Settings. They used to
+  replace each other silently, leaving a button on screen that did nothing.
+- Font availability is cached. `NSFont(name:)` was being called several times per tile on
+  every render to answer a question whose answer cannot change.
+- Only the readout's clock ticks now. The whole readout sat on a one-second timeline, so
+  the scanline canvas and the analyser were redrawn every second for nothing.
+- Dropped the unused `CommandKind.toggle` case; nothing ever produced it.
+
 ### Added
 
 - **Keep Awake**, in two modes: Mac and display both on, or Mac on with the display free

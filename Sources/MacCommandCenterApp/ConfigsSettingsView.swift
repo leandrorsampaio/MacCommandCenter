@@ -13,6 +13,9 @@ struct ConfigsSettingsView: View {
     @State private var draft = AppConfig.standard
     @State private var selection: ButtonPath?
     @State private var failure: String?
+    /// A config clicked while the draft was dirty, held until the user says whether
+    /// to discard.
+    @State private var pendingSelection: String?
     /// Compared against, rather than a flag: a flag had to be cleared after SwiftUI
     /// delivered the change notification, which it never reliably was.
     @State private var baseline = AppConfig.standard
@@ -28,6 +31,20 @@ struct ConfigsSettingsView: View {
         }
         .onAppear(perform: loadDraft)
         .onChange(of: model.configs.selectedID) { _, _ in loadDraft() }
+        .confirmationDialog(
+            "Discard unsaved changes to \(draft.name)?",
+            isPresented: Binding(
+                get: { pendingSelection != nil },
+                set: { if !$0 { pendingSelection = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("Discard Changes", role: .destructive) {
+                if let pendingSelection { model.configs.selectedID = pendingSelection }
+                pendingSelection = nil
+            }
+            Button("Keep Editing", role: .cancel) { pendingSelection = nil }
+        }
     }
 
     // MARK: - List
@@ -37,7 +54,14 @@ struct ConfigsSettingsView: View {
             List(
                 selection: Binding(
                     get: { model.configs.selectedID },
-                    set: { model.configs.selectedID = $0 ?? model.configs.selectedID }
+                    set: { newValue in
+                        guard let newValue, newValue != model.configs.selectedID else { return }
+                        if isDirty {
+                            pendingSelection = newValue
+                        } else {
+                            model.configs.selectedID = newValue
+                        }
+                    }
                 )
             ) {
                 ForEach(model.configs.configs) { config in

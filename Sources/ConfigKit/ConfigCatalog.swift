@@ -49,6 +49,7 @@ public final class ConfigCatalog {
             for manifest in Self.manifestURLs(in: directory) {
                 do {
                     let config = try Self.load(at: manifest, isBuiltIn: isBuiltIn)
+                    failures.append(contentsOf: Self.duplicateIDProblems(in: config))
                     // A user config reusing a built-in id replaces it.
                     loaded.removeAll { $0.id == config.id }
                     loaded.append(config)
@@ -97,6 +98,29 @@ public final class ConfigCatalog {
             }
         }
         return results
+    }
+
+    /// Ids key the registry, so a repeat silently replaces the earlier one and its button
+    /// simply stops responding. Cheap to detect, baffling to debug.
+    nonisolated static func duplicateIDProblems(in config: AppConfig) -> [String] {
+        var problems: [String] = []
+        var seenCommands: Set<String> = []
+
+        for command in config.allCommands {
+            if !seenCommands.insert(command.id).inserted {
+                problems.append(
+                    "\(config.name): two commands share the id '\(command.id)'. Only the last is used."
+                )
+            }
+
+            var seenOptions: Set<String> = []
+            for option in command.options where !seenOptions.insert(option.id).inserted {
+                problems.append(
+                    "\(config.name): command '\(command.id)' has two buttons with the id '\(option.id)'."
+                )
+            }
+        }
+        return problems
     }
 
     nonisolated static func load(at url: URL, isBuiltIn: Bool) throws -> AppConfig {

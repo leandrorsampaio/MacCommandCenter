@@ -193,7 +193,7 @@ public struct SkinFontSpec: Sendable, Equatable {
     /// Falls back to a system font whenever the named family is missing, so a skin that
     /// asks for a font the user does not have still renders.
     public var font: Font {
-        if let family, !family.isEmpty, NSFont(name: family, size: size) != nil {
+        if let family, !family.isEmpty, FontAvailability.hasFamily(family) {
             // `.weight` still applies to a custom family; dropping it silently ignored
             // every skin's weight, the built-in one included.
             return .custom(family, fixedSize: size).weight(weight)
@@ -204,7 +204,7 @@ public struct SkinFontSpec: Sendable, Equatable {
     /// True when the skin's requested family is actually available.
     public var isResolved: Bool {
         guard let family, !family.isEmpty else { return false }
-        return NSFont(name: family, size: size) != nil
+        return FontAvailability.hasFamily(family)
     }
 }
 
@@ -351,6 +351,40 @@ extension Skin {
     }
 }
 
+/// Caches whether a font family exists.
+///
+/// `NSFont(name:size:)` was being called several times per tile on every render purely to
+/// answer a question whose answer cannot change: either the family is installed or it is
+/// not. A family registered from a skin only ever becomes available, so a positive answer
+/// is permanent and a negative one is re-checked after a registration.
+enum FontAvailability {
+
+    private static let lock = NSLock()
+    private static var known: [String: Bool] = [:]
+
+    static func hasFamily(_ family: String) -> Bool {
+        lock.lock()
+        if let cached = known[family] {
+            lock.unlock()
+            return cached
+        }
+        lock.unlock()
+
+        let exists = NSFont(name: family, size: 12) != nil
+        lock.lock()
+        known[family] = exists
+        lock.unlock()
+        return exists
+    }
+
+    /// Called after a skin registers a font file, so a previous "missing" is forgotten.
+    static func invalidate() {
+        lock.lock()
+        known.removeAll()
+        lock.unlock()
+    }
+}
+
 // MARK: - Font registration
 
 /// Registers font files that ship inside a skin folder, so a skin can bring its own
@@ -387,6 +421,7 @@ enum FontRegistrar {
         }
 
         registered[url] = family
+        FontAvailability.invalidate()
         return family
     }
 }

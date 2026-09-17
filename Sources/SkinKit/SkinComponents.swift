@@ -84,14 +84,25 @@ public struct ReadoutView: View {
     private let primary: String
     private let secondary: String
     private let isActive: Bool
+    private let since: Date?
     private let showsVisualizer: Bool
 
     @Environment(\.skin) private var skin
 
-    public init(primary: String, secondary: String, isActive: Bool, showsVisualizer: Bool = true) {
+    /// `since`, when given, is rendered as a running clock ahead of `secondary`. It is
+    /// the only part that ticks: putting the whole readout on a timeline redrew the
+    /// scanline canvas and the bars once a second for nothing.
+    public init(
+        primary: String,
+        secondary: String,
+        isActive: Bool,
+        since: Date? = nil,
+        showsVisualizer: Bool = true
+    ) {
         self.primary = primary
         self.secondary = secondary
         self.isActive = isActive
+        self.since = since
         self.showsVisualizer = showsVisualizer
     }
 
@@ -102,7 +113,7 @@ public struct ReadoutView: View {
                     .font(skin.readoutFont)
                     .foregroundStyle(primaryInk.color)
                     .shadow(color: glow, radius: skin.metrics.glowRadius)
-                Text(secondary)
+                secondaryLine
                     .font(skin.fonts.readout.font)
                     .foregroundStyle(secondaryInk.color)
                     .opacity(0.9)
@@ -137,6 +148,22 @@ public struct ReadoutView: View {
         .bevel(.sunken)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(primary). \(secondary)")
+    }
+
+    @ViewBuilder
+    private var secondaryLine: some View {
+        if let since {
+            TimelineView(.periodic(from: .now, by: 1)) { _ in
+                Text(Self.elapsed(since: since) + "  " + secondary)
+            }
+        } else {
+            Text(secondary)
+        }
+    }
+
+    static func elapsed(since: Date) -> String {
+        let total = max(0, Int(Date().timeIntervalSince(since)))
+        return String(format: "%02d:%02d:%02d", total / 3600, (total % 3600) / 60, total % 60)
     }
 
     private var primaryInk: SkinRGBA {
