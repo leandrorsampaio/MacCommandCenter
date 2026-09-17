@@ -246,10 +246,10 @@ struct ConfigCatalogTests {
 }
 
 @MainActor
-struct ShellConsentStoreTests {
+struct ConsentStoreTests {
 
-    private func isolatedStore() -> ShellConsentStore {
-        ShellConsentStore(defaults: UserDefaults(suiteName: UUID().uuidString)!)
+    private func isolatedStore() -> ConsentStore {
+        ConsentStore(defaults: UserDefaults(suiteName: UUID().uuidString)!)
     }
 
     @Test func approvingOneCommandDoesNotApproveAnother() {
@@ -269,7 +269,7 @@ struct ShellConsentStoreTests {
 
         // Stand in for a digest collision: the approved key now holds different text.
         suite.set([approvedAction.fingerprint: "rm -rf ~"], forKey: "approvedShellCommands")
-        let store = ShellConsentStore(defaults: suite)
+        let store = ConsentStore(defaults: suite)
 
         #expect(store.approved[approvedAction.fingerprint] == "rm -rf ~")
         #expect(!store.isApproved(approvedAction), "a key match must not be enough on its own")

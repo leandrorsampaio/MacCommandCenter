@@ -22,7 +22,11 @@ public final class ControlServer {
     public let port: UInt16
 
     @ObservationIgnored private var listener: NWListener?
-    @ObservationIgnored private var connections: Set<ObjectIdentifier> = []
+    @ObservationIgnored private var sessions: [ObjectIdentifier: HTTPSession] = [:]
+
+    /// A loopback control API needs no more than a handful at once; the cap keeps a
+    /// misbehaving local client from opening sockets without limit.
+    private static let maximumConcurrentConnections = 16
     // Held strongly: a server outliving its registry has nothing to serve, and
     // `CommandCenter` never refers back, so there is no cycle.
     @ObservationIgnored private let center: CommandCenter
@@ -74,6 +78,10 @@ public final class ControlServer {
     }
 
     public func stop() {
+        for session in sessions.values {
+            session.cancel()
+        }
+        sessions.removeAll()
         listener?.cancel()
         listener = nil
         isRunning = false
@@ -86,8 +94,17 @@ public final class ControlServer {
     // MARK: - Connection handling
 
     private func accept(_ connection: NWConnection) {
+        guard sessions.count < Self.maximumConcurrentConnections else {
+            connection.cancel()
+            return
+        }
+
         let session = HTTPSession(connection: connection) { request in
             MainActor.assumeIsolated { self.respond(to: request) }
+        }
+        sessions[ObjectIdentifier(session)] = session
+        session.onFinish = { [weak self] finished in
+            MainActor.assumeIsolated { self?.sessions[ObjectIdentifier(finished)] = nil }
         }
         session.start()
     }

@@ -8,6 +8,8 @@ struct CommandSectionView: View {
 
     let model: AppModel
     let descriptor: CommandDescriptor
+    /// How many options appear above this command in the panel, so digit keys stay unique.
+    let shortcutOffset: Int
 
     @Environment(\.skin) private var skin
 
@@ -20,7 +22,7 @@ struct CommandSectionView: View {
                     CommandTile(
                         option: option,
                         isActive: state.activeOptionID == option.id,
-                        shortcutNumber: index + 1
+                        shortcutNumber: shortcutOffset + index + 1
                     ) {
                         model.center.tryPerform(.toggle(optionID: option.id), on: descriptor.id)
                     }

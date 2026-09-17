@@ -51,6 +51,9 @@ final class AppModel {
         runtime.consentPrompt = { [weak self] action in
             await self?.requestShellConsent(action) ?? .deny
         }
+        runtime.urlConsentPrompt = { [weak self] url in
+            await self?.requestURLConsent(url) ?? .deny
+        }
 
         applyCurrentConfig()
         observeConfigSelection()
@@ -114,6 +117,32 @@ final class AppModel {
             Only allow commands you understand.
             """
         alert.addButton(withTitle: "Run Once")
+        alert.addButton(withTitle: "Always Allow")
+        alert.addButton(withTitle: "Cancel")
+
+        NSApp.activate(ignoringOtherApps: true)
+        switch alert.runModal() {
+        case .alertFirstButtonReturn: return .allowOnce
+        case .alertSecondButtonReturn: return .allowAlways
+        default: return .deny
+        }
+    }
+
+    /// Shown before a privileged URL is handed to Launch Services. A `file:` or
+    /// `shortcuts:` URL can start an app or an automation, so a shared config must not be
+    /// able to open one unseen.
+    private func requestURLConsent(_ url: URL) async -> ShellConsent {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = "Open this?"
+        alert.informativeText = """
+            The config "\(configs.current.name)" wants to open:
+
+            \(url.absoluteString)
+
+            This can start an app or an automation. Only allow what you recognise.
+            """
+        alert.addButton(withTitle: "Open Once")
         alert.addButton(withTitle: "Always Allow")
         alert.addButton(withTitle: "Cancel")
 

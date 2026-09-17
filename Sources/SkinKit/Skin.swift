@@ -252,6 +252,8 @@ public struct Skin: Sendable, Equatable, Identifiable {
     public var notes: String
     public var isBuiltIn: Bool
     public var folderURL: URL?
+    /// Where this skin was read from: the package folder, or a bare `.json` file.
+    public var sourceURL: URL?
 
     public var colors: SkinColors
     public var metrics: SkinMetrics

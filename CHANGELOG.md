@@ -8,7 +8,26 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
-Following an external review (`review_claude_fable_5_1.md`):
+Following two external reviews (`review_claude_fable_5_1.md`, `review_gemini_3_8_flash.md`):
+
+- **Clicking the menu bar icon opened the panel without giving it keyboard focus**, so the
+  digit shortcuts did nothing and the keystrokes went to whatever app was behind it.
+- **`openURL` had no consent gate**, so a shared config could launch an app, a script or a
+  Shortcuts automation with one click and no confirmation — in the sandboxed build too.
+  Web and mail links stay unprompted; anything that can *start* something now asks, once,
+  and is revocable in Settings.
+- **HTTP sessions were kept alive only by their own receive closure**, so a client that
+  connected and said nothing leaked one forever. Sessions are now tracked, time out after
+  ten seconds, are capped, and are closed when the server stops. The server also sends FIN
+  before closing, which was truncating responses to any client reusing a connection.
+- **Digit shortcuts collided across commands** — every command numbered its options from
+  1, so only one of them ever responded.
+- **A bare `Name.json` skin or config could not be deleted**: the UI required a package
+  folder, so Delete silently did nothing.
+- The Settings window centred itself on every open, discarding its saved position.
+- "Add Button" was enabled with nothing selected and did nothing.
+- The App Store build no longer ships a string directing users to download elsewhere.
+
 
 - **Switching or reloading a config could run a shell command with no click.** The
   registry restored "still active" option ids across a swap without knowing what they do,

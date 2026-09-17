@@ -86,12 +86,14 @@ final class FloatingPanelController {
         }
         clampToScreen()
 
+        // Always key. A `.nonactivatingPanel` can take key without activating the app, so
+        // a mouse click does not steal the frontmost app — but the panel still receives
+        // its own keys. Ordering it front without key meant 1, 2 and Escape were typed
+        // into whatever was behind it.
         if activating {
             NSApp.activate(ignoringOtherApps: true)
-            panel.makeKeyAndOrderFront(nil)
-        } else {
-            panel.orderFrontRegardless()
         }
+        panel.makeKeyAndOrderFront(nil)
     }
 
     func hide() {

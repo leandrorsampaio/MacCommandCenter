@@ -132,8 +132,7 @@ public final class ConfiguredCommand: CommandHandling {
             activeOption = optionID
 
         case .openURL(let url):
-            runtime.open(url)
-            report("Opened \(url.host ?? url.lastPathComponent).")
+            runOpen(url, optionID: optionID)
 
         case .shell(let shellAction):
             guard ShellSupport.isAvailable else {
@@ -153,6 +152,26 @@ public final class ConfiguredCommand: CommandHandling {
         activatedAt = nil
         transientDetail = nil
         runningOption = nil
+    }
+
+    private func runOpen(_ url: URL, optionID: String) {
+        runningOption = optionID
+        stateDidChange?()
+
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer {
+                self.runningOption = nil
+                self.stateDidChange?()
+            }
+
+            guard await self.runtime.authorize(url: url) else {
+                self.report("Not allowed.")
+                return
+            }
+            self.runtime.open(url)
+            self.report("Opened \(url.host ?? url.lastPathComponent).")
+        }
     }
 
     private func runShell(_ action: ShellAction, optionID: String) {

@@ -47,7 +47,9 @@ public enum ShellSupport {
         #endif
     }
 
-    public static let unavailableReason = "Needs the direct download build"
+    /// Deliberately neutral: a shipped string pointing App Store users at an outside
+    /// download is a review risk, and is not something they can act on in that build.
+    public static let unavailableReason = "Not available in this version"
 }
 
 /// An action exactly as it appeared in the file. Kept verbatim for anything this build

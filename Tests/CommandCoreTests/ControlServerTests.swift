@@ -136,6 +136,22 @@ struct ControlServerTests {
         #expect(body.contains("option"))
     }
 
+    /// Guards the connection cap: sessions used to be kept alive only by their own
+    /// receive closure, so a leak would silently fill the table and stop the server
+    /// answering after a while.
+    @Test func keepsAnsweringAfterManyConnections() async throws {
+        let port = freePort()
+        let (_, server) = makeServer(port: port)
+        server.start()
+        defer { server.stop() }
+        try await waitUntilRunning(server)
+
+        for _ in 0..<40 {
+            let (status, _) = try await get("/v1/state", port: port)
+            #expect(status == 200)
+        }
+    }
+
     @Test func stoppingReleasesThePort() async throws {
         let port = freePort()
         let (_, first) = makeServer(port: port)

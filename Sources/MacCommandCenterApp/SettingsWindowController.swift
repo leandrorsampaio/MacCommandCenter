@@ -33,7 +33,11 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         window.setFrameAutosaveName("MacCommandCenterSettings")
         window.isReleasedWhenClosed = false
         window.delegate = self
-        window.center()
+        // Only centre when there is nothing to restore; centring unconditionally
+        // discarded wherever the user had put it, every single time.
+        if !window.setFrameUsingName("MacCommandCenterSettings") {
+            window.center()
+        }
 
         self.window = window
         NSApp.activate(ignoringOtherApps: true)

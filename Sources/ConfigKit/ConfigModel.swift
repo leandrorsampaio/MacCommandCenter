@@ -13,6 +13,8 @@ public struct AppConfig: Sendable, Equatable, Identifiable {
     public var notes: String
     public var isBuiltIn: Bool
     public var folderURL: URL?
+    /// Where this config was read from: the package folder, or a bare `.json` file.
+    public var sourceURL: URL?
     public var groups: [ConfigGroup]
 
     public init(
@@ -22,6 +24,7 @@ public struct AppConfig: Sendable, Equatable, Identifiable {
         notes: String = "",
         isBuiltIn: Bool = false,
         folderURL: URL? = nil,
+        sourceURL: URL? = nil,
         groups: [ConfigGroup]
     ) {
         self.id = id
@@ -30,6 +33,7 @@ public struct AppConfig: Sendable, Equatable, Identifiable {
         self.notes = notes
         self.isBuiltIn = isBuiltIn
         self.folderURL = folderURL
+        self.sourceURL = sourceURL
         self.groups = groups
     }
 

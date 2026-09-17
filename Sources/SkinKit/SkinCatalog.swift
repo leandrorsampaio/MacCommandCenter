@@ -128,13 +128,14 @@ public final class SkinCatalog {
                 url.lastPathComponent == "skin.json" ? url.deletingLastPathComponent() : nil
             let identifier =
                 manifest.id ?? name.lowercased().replacingOccurrences(of: " ", with: "-")
-            let skin = Skin(
+            var skin = Skin(
                 manifest: manifest,
                 base: .classic,
                 id: identifier,
                 folderURL: folder,
                 isBuiltIn: isBuiltIn
             )
+            skin.sourceURL = folder ?? url
             return .success(skin)
         } catch let error as DecodingError {
             return .failure(LoadFailure(message: "\(name): \(Self.describe(error))"))
@@ -167,8 +168,9 @@ public final class SkinCatalog {
     }
 
     public func delete(_ skin: Skin) throws {
-        guard !skin.isBuiltIn, let folder = skin.folderURL else { return }
-        try FileManager.default.trashItem(at: folder, resultingItemURL: nil)
+        // `folderURL` is nil for a bare `.json`, which used to make Delete a no-op.
+        guard !skin.isBuiltIn, let target = skin.folderURL ?? skin.sourceURL else { return }
+        try FileManager.default.trashItem(at: target, resultingItemURL: nil)
         reload()
     }
 

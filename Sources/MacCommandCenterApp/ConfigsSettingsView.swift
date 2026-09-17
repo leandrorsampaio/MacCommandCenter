@@ -194,7 +194,7 @@ struct ConfigsSettingsView: View {
             Button("Add Command") { addCommand() }
                 .disabled(draft.groups.isEmpty)
             Button("Add Button") { addButton() }
-                .disabled(selection == nil && draft.allCommands.isEmpty)
+                .disabled(selection == nil)
 
             Spacer()
 

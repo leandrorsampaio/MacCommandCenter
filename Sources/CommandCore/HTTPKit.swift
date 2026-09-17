@@ -62,7 +62,15 @@ final class HTTPSession {
     private let connection: NWConnection
     private let handler: @Sendable (HTTPRequest) -> HTTPResponse
     private var buffer = Data()
-    private static let maximumRequestSize = 64 * 1024
+    private var deadline: DispatchWorkItem?
+    private var isFinished = false
+
+    static let maximumRequestSize = 64 * 1024
+    /// A client that connects and then says nothing must not hold the session open.
+    private static let requestTimeout: TimeInterval = 10
+
+    /// Called exactly once when the exchange ends, however it ends.
+    var onFinish: ((HTTPSession) -> Void)?
 
     init(connection: NWConnection, handler: @escaping @Sendable (HTTPRequest) -> HTTPResponse) {
         self.connection = connection
@@ -71,7 +79,25 @@ final class HTTPSession {
 
     func start() {
         connection.start(queue: .main)
+
+        let timeout = DispatchWorkItem { [weak self] in self?.cancel() }
+        deadline = timeout
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.requestTimeout, execute: timeout)
+
         receive()
+    }
+
+    /// Idempotent: every exit path funnels through here so the socket is always closed
+    /// and the owner always gets to drop its reference.
+    func cancel() {
+        guard !isFinished else { return }
+        isFinished = true
+        deadline?.cancel()
+        deadline = nil
+        connection.cancel()
+        let finish = onFinish
+        onFinish = nil
+        finish?(self)
     }
 
     private func receive() {
@@ -92,7 +118,7 @@ final class HTTPSession {
             }
 
             if error != nil || isComplete {
-                self.connection.cancel()
+                self.cancel()
                 return
             }
 
@@ -101,10 +127,15 @@ final class HTTPSession {
     }
 
     private func finish(with response: HTTPResponse) {
+        // `.finalMessage` with `isComplete` sends FIN, so the peer sees a clean end of
+        // stream. Cancelling the moment the bytes reach the transport can cut the
+        // response short, which a client reusing the connection reports as a lost one.
         connection.send(
             content: response.wireFormat,
-            completion: .contentProcessed { _ in
-                self.connection.cancel()
+            contentContext: .finalMessage,
+            isComplete: true,
+            completion: .contentProcessed { [weak self] _ in
+                self?.cancel()
             })
     }
 

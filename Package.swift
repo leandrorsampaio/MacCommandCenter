@@ -37,6 +37,7 @@ let package = Package(
         ),
         .executableTarget(name: "mcc", dependencies: ["CommandCore"], swiftSettings: settings),
 
+        .testTarget(name: "AppSupportTests", dependencies: ["AppSupport"], swiftSettings: settings),
         .testTarget(name: "CommandCoreTests", dependencies: ["CommandCore"], swiftSettings: settings),
         .testTarget(name: "SkinKitTests", dependencies: ["SkinKit"], swiftSettings: settings),
         .testTarget(name: "ConfigKitTests", dependencies: ["ConfigKit", "CommandCore"], swiftSettings: settings),

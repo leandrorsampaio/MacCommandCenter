@@ -27,7 +27,11 @@ struct ControlPanelView: View {
                 ForEach(model.center.groups, id: \.self) { group in
                     SkinSectionLabel(group)
                     ForEach(model.center.descriptors(in: group)) { descriptor in
-                        CommandSectionView(model: model, descriptor: descriptor)
+                        CommandSectionView(
+                            model: model,
+                            descriptor: descriptor,
+                            shortcutOffset: shortcutOffset(for: descriptor)
+                        )
                     }
                 }
 
@@ -50,6 +54,17 @@ struct ControlPanelView: View {
         .background(skin.colors.panel.color)
         .bevel(.raised)
         .skin(skin)
+    }
+
+    /// Digit shortcuts are numbered across the whole panel, not per command: two
+    /// commands each starting at 1 meant only one of them ever responded.
+    private func shortcutOffset(for descriptor: CommandDescriptor) -> Int {
+        var offset = 0
+        for other in model.center.descriptors {
+            if other.id == descriptor.id { break }
+            offset += other.options.count
+        }
+        return offset
     }
 
     // MARK: - Readout

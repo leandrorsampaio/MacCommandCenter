@@ -105,12 +105,14 @@ public final class ConfigCatalog {
         let fallbackID = (isPackage ? url.deletingLastPathComponent() : url)
             .deletingPathExtension()
             .lastPathComponent
-        return try ConfigCodec.decode(
+        var config = try ConfigCodec.decode(
             data,
             fallbackID: fallbackID,
             folderURL: isPackage ? url.deletingLastPathComponent() : nil,
             isBuiltIn: isBuiltIn
         )
+        config.sourceURL = isPackage ? url.deletingLastPathComponent() : url
+        return config
     }
 
     // MARK: - Writing
@@ -152,8 +154,9 @@ public final class ConfigCatalog {
     }
 
     public func delete(_ config: AppConfig) throws {
-        guard !config.isBuiltIn, let folder = config.folderURL else { return }
-        try FileManager.default.trashItem(at: folder, resultingItemURL: nil)
+        // `folderURL` is nil for a bare `.json`, which used to make Delete a no-op.
+        guard !config.isBuiltIn, let target = config.folderURL ?? config.sourceURL else { return }
+        try FileManager.default.trashItem(at: target, resultingItemURL: nil)
         reload()
     }
 

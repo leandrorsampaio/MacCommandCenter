@@ -35,7 +35,7 @@ struct RestoreSafetyTests {
         defer { try? FileManager.default.removeItem(at: marker) }
 
         let shell = ShellAction(command: "touch '\(marker.path)'")
-        let consent = ShellConsentStore(defaults: UserDefaults(suiteName: UUID().uuidString)!)
+        let consent = ConsentStore(defaults: UserDefaults(suiteName: UUID().uuidString)!)
         consent.approve(shell)  // the user pressed Always Allow on this text, once, somewhere
 
         var prompts = 0
