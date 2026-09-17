@@ -9,9 +9,16 @@ enum SkinAuthoring {
     static var exampleManifest: String {
         let classic = Skin.classic
 
+        // Both lists are generated from the live key arrays, so a token added to the
+        // format cannot quietly go missing from the example every author starts with.
         let colors = SkinColors.keys.compactMap { key -> String? in
             guard let value = classic.colors[key] else { return nil }
             return "    \"\(key)\": \"\(value.hex)\""
+        }.joined(separator: ",\n")
+
+        let metrics = SkinMetrics.keys.compactMap { key -> String? in
+            guard let value = classic.metrics[key] else { return nil }
+            return "    \"\(key)\": \(format(value))"
         }.joined(separator: ",\n")
 
         return """
@@ -27,17 +34,7 @@ enum SkinAuthoring {
               },
 
               "metrics": {
-                "width": \(format(classic.metrics.width)),
-                "padding": \(format(classic.metrics.padding)),
-                "spacing": \(format(classic.metrics.spacing)),
-                "bevel": \(format(classic.metrics.bevel)),
-                "cornerRadius": \(format(classic.metrics.cornerRadius)),
-                "tileHeight": \(format(classic.metrics.tileHeight)),
-                "titlebarHeight": \(format(classic.metrics.titlebarHeight)),
-                "readoutPadding": \(format(classic.metrics.readoutPadding)),
-                "ledSize": \(format(classic.metrics.ledSize)),
-                "glowRadius": \(format(classic.metrics.glowRadius)),
-                "tracking": \(format(classic.metrics.tracking))
+            \(metrics)
               },
 
               "fonts": {
@@ -51,6 +48,11 @@ enum SkinAuthoring {
                 "scanlines": true,
                 "visualizer": true,
                 "uppercase": true
+              },
+
+              "chrome": {
+                "screws": false,
+                "keyClick": false
               }
             }
 
@@ -115,6 +117,12 @@ enum SkinAuthoring {
         | `ledOn`, `ledOff` | Indicator lamps |
         | `visualizerOn`, `visualizerOff` | The spectrum bars |
         | `accent` | Focus rings and the menu bar icon tint |
+        | `plate` | Engraved plates: the nameplate and module captions |
+        | `plateText` | Printing on those plates |
+        | `keyWall` | The side wall a relief key stands on |
+        | `gaugeFace` | The dial face of a gauge |
+        | `gaugeInk` | Its ticks and printing |
+        | `needle` | Its needle |
 
         ## Metrics
 
@@ -134,6 +142,13 @@ enum SkinAuthoring {
         | `ledSize` | 8 | Lamp diameter |
         | `glowRadius` | 7 | Bloom on lit elements |
         | `tracking` | 0.6 | Letter spacing on display type |
+        | `keyRelief` | 5 | How far a relief key stands proud, and sinks when pressed |
+        | `indicatorDelay` | 0 | Seconds between a key latching and the lamps reporting it |
+
+        `indicatorDelay` is worth a word. At `0` the panel responds instantly. Give it
+        `0.2` and the key still falls the moment you press it — that part is mechanical —
+        but the lamps and the readout follow a fifth of a second later, the way they would
+        if a relay somewhere else had to close first.
 
         ## Fonts
 
@@ -164,6 +179,50 @@ enum SkinAuthoring {
         | `scanlines` | true | CRT lines over the LCD |
         | `visualizer` | true | The spectrum bars in the readout |
         | `uppercase` | true | Force labels to caps |
+
+        ## Chrome
+
+        | Token | Default | Effect |
+        |---|---|---|
+        | `screws` | false | Screws in the four corners |
+        | `keyClick` | false | A click when a key is pressed |
+
+        ## Layout
+
+        Without a `layout`, a skin gets the original stack: a readout, then the command
+        tiles. With one, it composes the panel itself from a fixed vocabulary of slots.
+
+            "layout": [
+              { "slot": "nameplate", "text": "Control panel", "subtitle": "Unit 1" },
+              { "slot": "annunciator" },
+              { "slot": "row", "children": [
+                { "slot": "gauge", "source": "battery", "width": 168 },
+                { "slot": "readout", "style": "nixie" }
+              ]},
+              { "slot": "commands", "style": "key", "columns": 2 },
+              { "slot": "lamps" },
+              { "slot": "spacer" },
+              { "slot": "controls" }
+            ]
+
+        | Slot | What it draws |
+        |---|---|
+        | `nameplate` | An engraved header plate. Defaults to the config's name |
+        | `annunciator` | A backlit legend cell per command, plus mains and on-top |
+        | `readout` | `style`: `lcd` (the original strip) or `nixie` (a large counter) |
+        | `gauge` | `source`: `battery`. Optional `width` |
+        | `commands` | The buttons. `style`: `tile` or `key`. `columns`: 0 means one row |
+        | `lamps` | An indicator lamp per command, plus battery |
+        | `controls` | Float-on-top and close, as panel keys |
+        | `spacer` | Pushes everything after it to the bottom |
+        | `row` | Lays its `children` out side by side |
+
+        `key` is a latching pushbutton: it stays down until pressed again, and its cap
+        never changes colour, because a physical key is the colour it is. State shows on
+        the lamps and the annunciator.
+
+        A slot this version does not recognise is skipped rather than failing the skin, so
+        a layout written for a later release still renders what it can.
 
         ## Sharing a skin
 

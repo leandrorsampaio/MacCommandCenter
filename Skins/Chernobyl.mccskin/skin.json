@@ -3,58 +3,112 @@
   "id": "reactor-control",
   "name": "Reactor Control",
   "author": "Mac Command Center",
-  "notes": "Sage panel, bakelite keys, amber annunciator. The first light skin.",
-
+  "notes": "Soviet console: sage panel, latching bakelite keys, amber counter, needle gauge.",
+  "layout": [
+    {
+      "slot": "nameplate",
+      "text": "\u041f\u0443\u043b\u044c\u0442 \u0443\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0438\u044f",
+      "subtitle": "Control panel \u00b7 \u0411\u0429\u0423-1"
+    },
+    {
+      "slot": "annunciator"
+    },
+    {
+      "slot": "row",
+      "children": [
+        {
+          "slot": "gauge",
+          "source": "battery",
+          "width": 168
+        },
+        {
+          "slot": "readout",
+          "style": "nixie"
+        }
+      ]
+    },
+    {
+      "slot": "commands",
+      "style": "key",
+      "columns": 2
+    },
+    {
+      "slot": "lamps"
+    },
+    {
+      "slot": "spacer"
+    },
+    {
+      "slot": "controls"
+    }
+  ],
+  "chrome": {
+    "screws": true,
+    "keyClick": true
+  },
   "colors": {
-    "panel": "#8D9880",
-    "panelHighlight": "#B7C1A8",
-    "panelShadow": "#3D4437",
-    "titlebarTop": "#6E7A61",
-    "titlebarBottom": "#4F5947",
-    "titlebarText": "#EAE6D6",
-    "titlebarButtonFace": "#3D4437",
-    "sectionLabel": "#2E3327",
-    "text": "#1F231A",
-    "textDim": "#454C3C",
-    "buttonFace": "#D2CAB1",
-    "buttonFacePressed": "#B4442A",
-    "buttonText": "#1F231A",
+    "panel": "#5C6657",
+    "panelHighlight": "#6D7867",
+    "panelShadow": "#2B2E27",
+    "sectionLabel": "#EFE7CF",
+    "text": "#EFE7CF",
+    "textDim": "#8A8A7A",
+    "buttonFace": "#5A5A52",
+    "buttonFacePressed": "#3A3A34",
+    "buttonText": "#D9D3BF",
     "buttonTextActive": "#FFF3DC",
-    "buttonSubtext": "#54573F",
+    "buttonSubtext": "#A8A493",
     "buttonSubtextActive": "#F6D8B4",
-    "readoutBackground": "#130F07",
-    "readoutInk": "#FFA820",
-    "readoutInkDim": "#B06B10",
-    "readoutInkIdle": "#5C3B0B",
-    "ledOn": "#FF3A1C",
-    "ledOff": "#494C3A",
-    "visualizerOn": "#FFA820",
+    "readoutBackground": "#0C0A08",
+    "readoutInk": "#FF8A2A",
+    "readoutInkDim": "#C9722D",
+    "readoutInkIdle": "#8F8878",
+    "ledOn": "#FFB040",
+    "ledOff": "#3A3A33",
+    "visualizerOn": "#FF8A2A",
     "visualizerOff": "#3B3317",
-    "accent": "#BE3318"
+    "accent": "#FFB040",
+    "plate": "#D9D3BF",
+    "plateText": "#171A15",
+    "keyWall": "#141410",
+    "gaugeFace": "#E4DDC6",
+    "gaugeInk": "#2A2A22",
+    "needle": "#C8251B"
   },
-
   "metrics": {
+    "width": 480,
+    "padding": 22,
+    "spacing": 10,
     "bevel": 3,
-    "cornerRadius": 2,
-    "padding": 13,
-    "spacing": 12,
-    "tileHeight": 150,
-    "titlebarHeight": 22,
-    "ledSize": 10,
+    "cornerRadius": 4,
+    "titlebarHeight": 0,
+    "readoutPadding": 9,
+    "ledSize": 9,
     "glowRadius": 9,
-    "tracking": 1.4
+    "tracking": 1.2,
+    "keyRelief": 6,
+    "indicatorDelay": 0.2
   },
-
   "fonts": {
-    "display": { "family": "PT Sans", "size": 11, "weight": "bold" },
-    "readout": { "family": "PT Mono", "size": 12, "monospaced": true },
-    "body": { "family": "PT Sans", "size": 10 }
+    "display": {
+      "family": "PT Sans",
+      "size": 12,
+      "weight": "bold"
+    },
+    "readout": {
+      "family": "PT Mono",
+      "size": 12,
+      "monospaced": true
+    },
+    "body": {
+      "family": "PT Sans",
+      "size": 9
+    }
   },
-
   "effects": {
     "glow": true,
     "scanlines": false,
-    "visualizer": true,
+    "visualizer": false,
     "uppercase": true
   }
 }

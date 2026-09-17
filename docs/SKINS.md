@@ -55,6 +55,12 @@ Hex, with or without `#`. `#RGB`, `#RGBA`, `#RRGGBB` and `#RRGGBBAA` all work.
 | `ledOn`, `ledOff` | Indicator lamps |
 | `visualizerOn`, `visualizerOff` | The spectrum bars |
 | `accent` | Focus rings and the menu bar icon tint |
+| `plate` | Engraved plates: the nameplate and module captions |
+| `plateText` | Printing on those plates |
+| `keyWall` | The side wall a relief key stands on |
+| `gaugeFace` | The dial face of a gauge |
+| `gaugeInk` | Its ticks and printing |
+| `needle` | Its needle |
 
 ## Metrics
 
@@ -73,6 +79,13 @@ Points. Each is clamped, so a bad number cannot make the panel unusable.
 | `ledSize` | 8 | Lamp diameter |
 | `glowRadius` | 7 | Bloom on lit elements |
 | `tracking` | 0.6 | Letter spacing on display type |
+| `keyRelief` | 5 | How far a relief key stands proud, and sinks when pressed |
+| `indicatorDelay` | 0 | Seconds between a key latching and the lamps reporting it |
+
+`indicatorDelay` is the interesting one. At `0` the panel responds instantly. Give it
+`0.2` and the key still falls the moment you press it — that part is mechanical — but the
+lamps and the readout follow a fifth of a second behind, the way they would if a relay
+somewhere else in the building had to close first.
 
 ## Fonts
 
@@ -103,6 +116,60 @@ Other period-correct faces already on every Mac: `Courier New`, `Andale Mono`, `
 | `scanlines` | true | CRT lines over the LCD |
 | `visualizer` | true | The spectrum bars in the readout |
 | `uppercase` | true | Force labels to caps |
+
+## Chrome
+
+| Token | Default | Effect |
+|---|---|---|
+| `screws` | false | Screws in the four corners |
+| `keyClick` | false | A click when a key is pressed |
+
+## Layout
+
+This is the part that makes a skin a skin rather than a colour scheme.
+
+Without a `layout`, a skin gets the original stack — a readout, then the command tiles —
+so every skin written before this existed is unaffected. With one, the skin composes the
+panel itself:
+
+```json
+"layout": [
+  { "slot": "nameplate", "text": "Control panel", "subtitle": "Unit 1" },
+  { "slot": "annunciator" },
+  { "slot": "row", "children": [
+    { "slot": "gauge", "source": "battery", "width": 168 },
+    { "slot": "readout", "style": "nixie" }
+  ]},
+  { "slot": "commands", "style": "key", "columns": 2 },
+  { "slot": "lamps" },
+  { "slot": "spacer" },
+  { "slot": "controls" }
+]
+```
+
+| Slot | What it draws |
+|---|---|
+| `nameplate` | An engraved header plate. Defaults to the config's name |
+| `annunciator` | A backlit legend cell per command, plus mains and on-top |
+| `readout` | `style`: `lcd` (the original strip) or `nixie` (a large counter) |
+| `gauge` | `source`: `battery`. Optional `width` |
+| `commands` | The buttons. `style`: `tile` or `key`. `columns`: `0` means one row |
+| `lamps` | An indicator lamp per command, plus battery |
+| `controls` | Float-on-top and close, as panel keys |
+| `spacer` | Pushes everything after it to the bottom |
+| `row` | Lays its `children` out side by side |
+
+`key` is a **latching pushbutton**: it stays down until pressed again, and its cap never
+changes colour, because a physical key is the colour it is. State shows on the lamps and
+the annunciator, not on the cap.
+
+**The app draws every one of these.** A skin chooses from the vocabulary and says what
+goes where — it never supplies code, markup or images that get executed. A slot this
+version does not recognise is skipped rather than failing the skin, so a layout written
+for a later release still renders what it can.
+
+**Reactor Control** is the worked example: square panel, annunciator strip, needle gauge,
+amber counter, latching keys and a control row. Read its `skin.json` next to this file.
 
 ## Sharing
 

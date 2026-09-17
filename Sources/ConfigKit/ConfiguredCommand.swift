@@ -126,7 +126,10 @@ public final class ConfiguredCommand: CommandHandling {
         case .keepAwake(let mode):
             try assertion.hold(
                 mode == .systemAndDisplay ? .systemAndDisplay : .systemOnly,
-                reason: "Mac Command Center - \(definition.title)"
+                // The command id, not its title: a title may be in any language, and a
+                // non-ASCII reason renders as an empty name in `pmset -g assertions`,
+                // which is exactly where people look to check this is working.
+                reason: "Mac Command Center (\(definition.id))"
             )
             if activeOption != optionID { activatedAt = Date() }
             activeOption = optionID

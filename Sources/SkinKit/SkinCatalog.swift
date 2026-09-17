@@ -136,6 +136,14 @@ public final class SkinCatalog {
                 isBuiltIn: isBuiltIn
             )
             skin.sourceURL = folder ?? url
+
+            // `layout` is a heterogeneous tree, which Codable cannot express cleanly, so
+            // it is read from the raw object alongside the typed manifest.
+            if let raw = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                let layout = SkinLayout(json: raw["layout"])
+            {
+                skin.layout = layout
+            }
             return .success(skin)
         } catch let error as DecodingError {
             return .failure(LoadFailure(message: "\(name): \(Self.describe(error))"))

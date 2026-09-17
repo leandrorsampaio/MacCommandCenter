@@ -94,6 +94,34 @@ Following two external reviews (`review_claude_fable_5_1.md`, `review_gemini_3_8
 
 ### Added
 
+- **A skin now owns the panel's layout, not just its colours.** It declares rows from a
+  fixed vocabulary of slots — nameplate, annunciator, readout, gauge, commands, lamps,
+  controls, spacer, row — and picks how commands draw. The app renders every part, so a
+  skin is still a data file rather than code, and a slot a build does not recognise is
+  skipped rather than failing the skin. A skin with no `layout` gets the original stack,
+  unchanged.
+- **Latching relief keys** (`"style": "key"`). A key falls the moment it is pressed and
+  stays down until pressed again, over-travelling slightly before it releases. Its cap
+  never changes colour — a physical key is the colour it is — so state shows on the lamps.
+- **`indicatorDelay`**, which separates the mechanical from the electrical: the key
+  latches instantly, the lamps and readout follow after the delay, the way they would if a
+  relay elsewhere had to close first.
+- **New parts a console skin needs**: engraved nameplate, backlit annunciator cells, a
+  nixie counter, an analogue needle gauge, domed indicator lamps, corner screws and a
+  synthesised key click.
+- **Battery level.** `PowerStatus` now reports charge as well as source, which is what the
+  gauge reads.
+- **Reactor Control** rebuilt as the worked example: square, annunciator strip, needle
+  gauge, amber uptime counter, latching keys, and a control row carrying float-on-top and
+  close.
+
+### Fixed
+
+- The power assertion's reason was built from the command's title, so a config in Cyrillic
+  produced an assertion that `pmset -g assertions` renders as `named: ""` — invisible to
+  the exact command the README tells people to run. It uses the command id now.
+
+
 - **Reactor Control**, a fifth skin: sage panel, bakelite keys, amber annunciator. The
   first *light* skin, which is what proved the colour tokens were never secretly dark-only.
 - **Пульт**, a Cyrillic config to pair with it — the clearest demonstration so far that a

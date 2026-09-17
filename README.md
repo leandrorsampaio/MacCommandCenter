@@ -54,7 +54,13 @@ Mac. Clamshell sleep is enforced below the assertion layer, so no app can overri
 </p>
 
 
-Five skins ship with the app: **Classic '97**, **Amber VFD**, **Plasma**, **Midnight** (which sets `bevel: 0` and `uppercase: false` to prove the format is not stuck in 1997) and **Reactor Control**, a light Soviet control panel that pairs with a Cyrillic config. A skin is a `.mccskin` folder holding JSON:
+Five skins ship with the app. **Reactor Control** is the one that shows what the format
+can do: it declares a `layout`, so it is square, has an annunciator strip, a needle gauge,
+an amber counter and latching keys — none of which the default panel has any concept of.
+
+<p align="center">
+  <img src="docs/images/panel-reactor.png" width="440" alt="Reactor Control skin">
+</p>
 
 ```json
 { "name": "Red Alert", "colors": { "readoutInk": "#FF3B30", "ledOn": "#FF3B30" } }

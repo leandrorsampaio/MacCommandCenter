@@ -39,7 +39,13 @@ public extension Skin {
             ledOff: SkinRGBA(hex: "#23232A")!,
             visualizerOn: SkinRGBA(hex: "#4DFF9B")!,
             visualizerOff: SkinRGBA(hex: "#1E3A2A")!,
-            accent: SkinRGBA(hex: "#4DFF9B")!
+            accent: SkinRGBA(hex: "#4DFF9B")!,
+            plate: SkinRGBA(hex: "#45454E")!,
+            plateText: SkinRGBA(hex: "#D2D2DC")!,
+            keyWall: SkinRGBA(hex: "#17171B")!,
+            gaugeFace: SkinRGBA(hex: "#07120C")!,
+            gaugeInk: SkinRGBA(hex: "#4DFF9B")!,
+            needle: SkinRGBA(hex: "#4DFF9B")!
         ),
         metrics: SkinMetrics(
             width: 340,
@@ -52,13 +58,17 @@ public extension Skin {
             readoutPadding: 9,
             ledSize: 8,
             glowRadius: 7,
-            tracking: 0.6
+            tracking: 0.6,
+            keyRelief: 5,
+            indicatorDelay: 0
         ),
         fonts: SkinFonts(
             display: SkinFontSpec(family: "Geneva", size: 10, weight: .semibold),
             readout: SkinFontSpec(family: "Monaco", size: 11, monospaced: true),
             body: SkinFontSpec(family: "Geneva", size: 9.5)
         ),
-        effects: SkinEffects(glow: true, scanlines: true, visualizer: true, uppercase: true)
+        effects: SkinEffects(glow: true, scanlines: true, visualizer: true, uppercase: true),
+        chrome: SkinChrome(screws: false, keyClick: false),
+        layout: SkinLayout.stack
     )
 }

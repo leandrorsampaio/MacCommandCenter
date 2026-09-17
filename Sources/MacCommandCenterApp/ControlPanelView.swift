@@ -20,6 +20,12 @@ struct ControlPanelView: View {
 
     private var showsTitlebar: Bool { skin.metrics.titlebarHeight > 0 }
 
+    /// A skin whose layout includes a controls slot has already placed close and
+    /// float-on-top; adding the fallback pair would duplicate them.
+    private var layoutProvidesControls: Bool {
+        skin.layout.rows.contains { if case .controls = $0 { return true } else { return false } }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             if showsTitlebar {
@@ -45,12 +51,13 @@ struct ControlPanelView: View {
 
             // A skin may set `titlebarHeight: 0` — the shipped Midnight does — which
             // leaves no close or settings control anywhere. Give it one.
-            if !showsTitlebar {
+            if !showsTitlebar && !layoutProvidesControls {
                 chromelessControls
             }
         }
         .frame(width: skin.metrics.width)
         .skinSurface(skin.colors.panel, bevel: .raised)
+        .overlay { if skin.chrome.screws { SkinScrews() } }
         .skin(skin)
         .onPreferenceChange(ContentHeightKey.self) { height in
             contentHeight = height
@@ -61,17 +68,12 @@ struct ControlPanelView: View {
 
     private var measuredContent: some View {
         VStack(alignment: .leading, spacing: skin.metrics.spacing) {
-            readout
-
-            ForEach(model.center.groups, id: \.self) { group in
-                SkinSectionLabel(group)
-                ForEach(model.center.descriptors(in: group)) { descriptor in
-                    CommandSectionView(
-                        model: model,
-                        descriptor: descriptor,
-                        shortcutOffset: shortcutOffset(for: descriptor)
-                    )
-                }
+            // A skin that declares a layout composes the panel itself; one that does not
+            // gets the original stack, unchanged.
+            if skin.layout != SkinLayout.stack {
+                PanelSlotsView(model: model, rows: skin.layout.rows)
+            } else {
+                stackContent
             }
 
             if model.center.descriptors.isEmpty {
@@ -93,6 +95,23 @@ struct ControlPanelView: View {
                 Color.clear.preference(key: ContentHeightKey.self, value: proxy.size.height)
             }
         )
+    }
+
+    private var stackContent: some View {
+        VStack(alignment: .leading, spacing: skin.metrics.spacing) {
+            readout
+
+            ForEach(model.center.groups, id: \.self) { group in
+                SkinSectionLabel(group)
+                ForEach(model.center.descriptors(in: group)) { descriptor in
+                    CommandSectionView(
+                        model: model,
+                        descriptor: descriptor,
+                        shortcutOffset: shortcutOffset(for: descriptor)
+                    )
+                }
+            }
+        }
     }
 
     /// Leaves room for the menu bar and a margin, so the panel always fits the display it

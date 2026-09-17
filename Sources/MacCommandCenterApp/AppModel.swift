@@ -22,7 +22,9 @@ final class AppModel {
     let runtime = ActionRuntime()
     let server: ControlServer
 
-    private(set) var powerSource: PowerSource = .current
+    private(set) var powerStatus: PowerStatus = .current
+
+    var powerSource: PowerSource { powerStatus.source }
 
     /// Set by the app delegate once the global shortcut is registered.
     var isHotKeyRegistered = false
@@ -64,7 +66,7 @@ final class AppModel {
 
         refreshTimer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { _ in
             MainActor.assumeIsolated {
-                self.powerSource = .current
+                self.powerStatus = .current
                 self.center.refresh()
             }
         }

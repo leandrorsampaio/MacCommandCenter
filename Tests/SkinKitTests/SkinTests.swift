@@ -135,3 +135,78 @@ struct SkinAuthoringTests {
         }
     }
 }
+
+struct SkinLayoutTests {
+
+    private func layout(_ json: String) -> SkinLayout? {
+        let object = try? JSONSerialization.jsonObject(with: Data(json.utf8))
+        return SkinLayout(json: (object as? [String: Any])?["layout"])
+    }
+
+    @Test func decodesASlotTree() throws {
+        let parsed = try #require(
+            layout(
+                """
+                { "layout": [
+                    { "slot": "nameplate", "text": "Console" },
+                    { "slot": "row", "children": [
+                        { "slot": "gauge", "source": "battery", "width": 168 },
+                        { "slot": "readout", "style": "nixie" }
+                    ]},
+                    { "slot": "commands", "style": "key", "columns": 2 },
+                    { "slot": "spacer" },
+                    { "slot": "controls" }
+                ]}
+                """))
+
+        #expect(parsed.rows.count == 5)
+        #expect(parsed.rows[0] == .nameplate(title: "Console", subtitle: nil))
+        #expect(parsed.rows[2] == .commands(style: .key, columns: 2))
+        #expect(parsed.rows[4] == .controls)
+
+        guard case .row(let children) = parsed.rows[1] else {
+            Issue.record("expected a row")
+            return
+        }
+        #expect(children == [.gauge(source: .battery, width: 168), .readout(style: .nixie)])
+    }
+
+    /// A layout written for a later version must still render what this build knows.
+    @Test func unknownSlotsAreSkippedRatherThanFailing() throws {
+        let parsed = try #require(
+            layout(
+                """
+                { "layout": [
+                    { "slot": "oscilloscope" },
+                    { "slot": "lamps" }
+                ]}
+                """))
+
+        #expect(parsed.rows == [.lamps])
+    }
+
+    @Test func unknownStylesFallBackRatherThanFailing() throws {
+        let parsed = try #require(
+            layout(##"{ "layout": [ { "slot": "commands", "style": "hologram" } ] }"##))
+
+        #expect(parsed.rows == [.commands(style: .tile, columns: 0)])
+    }
+
+    @Test func columnCountsAreClamped() throws {
+        let parsed = try #require(
+            layout(##"{ "layout": [ { "slot": "commands", "style": "key", "columns": 99 } ] }"##))
+
+        #expect(parsed.rows == [.commands(style: .key, columns: 8)])
+    }
+
+    /// A skin with no layout, or an empty one, keeps the original stack.
+    @Test func missingOrEmptyLayoutsFallBackToTheStack() {
+        #expect(layout(##"{ "name": "Plain" }"##) == nil)
+        #expect(layout(##"{ "layout": [] }"##) == nil)
+        #expect(Skin.classic.layout == SkinLayout.stack)
+    }
+
+    @Test func aRowNeedsChildrenToCount() {
+        #expect(layout(##"{ "layout": [ { "slot": "row", "children": [] } ] }"##) == nil)
+    }
+}

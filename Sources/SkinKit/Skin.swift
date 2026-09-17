@@ -40,6 +40,16 @@ public struct SkinColors: Sendable, Equatable {
 
     public var accent: SkinRGBA
 
+    /// Engraved plates: the nameplate and the caption strips on modules.
+    public var plate: SkinRGBA
+    public var plateText: SkinRGBA
+    /// The side wall a relief key stands on.
+    public var keyWall: SkinRGBA
+    /// The face, printing and needle of an analogue gauge.
+    public var gaugeFace: SkinRGBA
+    public var gaugeInk: SkinRGBA
+    public var needle: SkinRGBA
+
     /// Documented key order, used by the authoring README and the example skin.
     public static let keys = [
         "panel", "panelHighlight", "panelShadow",
@@ -50,6 +60,7 @@ public struct SkinColors: Sendable, Equatable {
         "readoutBackground", "readoutInk", "readoutInkDim", "readoutInkIdle",
         "ledOn", "ledOff", "visualizerOn", "visualizerOff",
         "accent",
+        "plate", "plateText", "keyWall", "gaugeFace", "gaugeInk", "needle",
     ]
 
     public subscript(key: String) -> SkinRGBA? {
@@ -80,6 +91,12 @@ public struct SkinColors: Sendable, Equatable {
             case "visualizerOn": return visualizerOn
             case "visualizerOff": return visualizerOff
             case "accent": return accent
+            case "plate": return plate
+            case "plateText": return plateText
+            case "keyWall": return keyWall
+            case "gaugeFace": return gaugeFace
+            case "gaugeInk": return gaugeInk
+            case "needle": return needle
             default: return nil
             }
         }
@@ -111,6 +128,12 @@ public struct SkinColors: Sendable, Equatable {
             case "visualizerOn": visualizerOn = newValue
             case "visualizerOff": visualizerOff = newValue
             case "accent": accent = newValue
+            case "plate": plate = newValue
+            case "plateText": plateText = newValue
+            case "keyWall": keyWall = newValue
+            case "gaugeFace": gaugeFace = newValue
+            case "gaugeInk": gaugeInk = newValue
+            case "needle": needle = newValue
             default: break
             }
         }
@@ -141,11 +164,36 @@ public struct SkinMetrics: Sendable, Equatable {
     public var ledSize: Double
     public var glowRadius: Double
     public var tracking: Double
+    /// How far a relief key stands proud, and how far it sinks when pressed.
+    public var keyRelief: Double
+    /// Delay between a key latching and the lamps reporting it, in seconds. A console
+    /// with `0` responds instantly; a slower one feels like a relay closing elsewhere.
+    public var indicatorDelay: Double
 
     public static let keys = [
         "width", "padding", "spacing", "bevel", "cornerRadius", "tileHeight",
         "titlebarHeight", "readoutPadding", "ledSize", "glowRadius", "tracking",
+        "keyRelief", "indicatorDelay",
     ]
+
+    public subscript(key: String) -> Double? {
+        switch key {
+        case "width": return width
+        case "padding": return padding
+        case "spacing": return spacing
+        case "bevel": return bevel
+        case "cornerRadius": return cornerRadius
+        case "tileHeight": return tileHeight
+        case "titlebarHeight": return titlebarHeight
+        case "readoutPadding": return readoutPadding
+        case "ledSize": return ledSize
+        case "glowRadius": return glowRadius
+        case "tracking": return tracking
+        case "keyRelief": return keyRelief
+        case "indicatorDelay": return indicatorDelay
+        default: return nil
+        }
+    }
 
     mutating func apply(_ overrides: [String: Double]) {
         for (key, value) in overrides {
@@ -161,6 +209,8 @@ public struct SkinMetrics: Sendable, Equatable {
             case "ledSize": ledSize = max(0, min(24, value))
             case "glowRadius": glowRadius = max(0, min(30, value))
             case "tracking": tracking = max(-2, min(6, value))
+            case "keyRelief": keyRelief = max(0, min(14, value))
+            case "indicatorDelay": indicatorDelay = max(0, min(2, value))
             default: break
             }
         }
@@ -221,6 +271,26 @@ public struct SkinFonts: Sendable, Equatable {
 
 // MARK: - Effects
 
+/// Panel furniture that is not a colour or a size.
+public struct SkinChrome: Sendable, Equatable {
+    /// Screws in the four corners.
+    public var screws: Bool
+    /// A click when a key is pressed.
+    public var keyClick: Bool
+
+    public static let keys = ["screws", "keyClick"]
+
+    mutating func apply(_ overrides: [String: Bool]) {
+        for (key, value) in overrides {
+            switch key {
+            case "screws": screws = value
+            case "keyClick": keyClick = value
+            default: break
+            }
+        }
+    }
+}
+
 public struct SkinEffects: Sendable, Equatable {
     public var glow: Bool
     public var scanlines: Bool
@@ -259,6 +329,10 @@ public struct Skin: Sendable, Equatable, Identifiable {
     public var metrics: SkinMetrics
     public var fonts: SkinFonts
     public var effects: SkinEffects
+    public var chrome: SkinChrome
+    /// How the panel is composed. Defaults to the original stack, so a skin written
+    /// before layouts existed renders exactly as it always did.
+    public var layout: SkinLayout
 
     /// Applies text casing the skin asked for.
     public func label(_ text: String) -> String {
@@ -288,6 +362,7 @@ struct SkinManifest: Decodable {
     var colors: [String: String]?
     var metrics: [String: Double]?
     var effects: [String: Bool]?
+    var chrome: [String: Bool]?
     var fonts: [String: FontEntry]?
 }
 
@@ -323,6 +398,7 @@ extension Skin {
         if let overrides = manifest.colors { colors.apply(overrides) }
         if let overrides = manifest.metrics { metrics.apply(overrides) }
         if let overrides = manifest.effects { effects.apply(overrides) }
+        if let overrides = manifest.chrome { self.chrome.apply(overrides) }
 
         if let fontOverrides = manifest.fonts {
             apply(fontOverrides["display"], to: &fonts.display, folderURL: folderURL)

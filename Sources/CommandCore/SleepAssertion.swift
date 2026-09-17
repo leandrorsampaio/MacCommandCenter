@@ -69,6 +69,45 @@ public final class SleepAssertion {
     }
 }
 
+/// Power source plus, when there is a battery, how full it is.
+public struct PowerStatus: Sendable, Equatable {
+
+    public var source: PowerSource
+    /// 0...1, or `nil` on a machine with no battery.
+    public var charge: Double?
+
+    public init(source: PowerSource, charge: Double?) {
+        self.source = source
+        self.charge = charge
+    }
+
+    public static var current: PowerStatus {
+        guard let blob = IOPSCopyPowerSourcesInfo()?.takeRetainedValue(),
+            let sources = IOPSCopyPowerSourcesList(blob)?.takeRetainedValue() as? [CFTypeRef]
+        else { return PowerStatus(source: .unknown, charge: nil) }
+
+        for source in sources {
+            guard
+                let info = IOPSGetPowerSourceDescription(blob, source)?
+                    .takeUnretainedValue() as? [String: Any],
+                let state = info[kIOPSPowerSourceStateKey] as? String
+            else { continue }
+
+            var charge: Double?
+            if let capacity = info[kIOPSCurrentCapacityKey] as? Int,
+                let maximum = info[kIOPSMaxCapacityKey] as? Int, maximum > 0
+            {
+                charge = min(1, max(0, Double(capacity) / Double(maximum)))
+            }
+            return PowerStatus(
+                source: state == kIOPSACPowerValue ? .ac : .battery,
+                charge: charge
+            )
+        }
+        return PowerStatus(source: .unknown, charge: nil)
+    }
+}
+
 /// Where the Mac is currently drawing power. Shown in the UI because "does this work on
 /// battery?" is the first thing anyone asks about a keep-awake tool.
 public enum PowerSource: String, Sendable {
