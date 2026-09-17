@@ -39,9 +39,10 @@ public final class CommandCenter {
 
     /// Replaces the whole registry, used when a different config is selected.
     ///
-    /// Anything still present after the swap is switched back on. Editing an unrelated
-    /// button — or merely saving the file — must not quietly let the Mac fall asleep in
-    /// the middle of the work the app exists to protect.
+    /// Latching options that survive the swap are switched back on, so merely saving a
+    /// file does not let the Mac fall asleep. One-shot options are never restored: an id
+    /// that meant "stay awake" in one config can mean "run this command" in another, and
+    /// re-firing it would run it with nobody asking.
     public func replaceAll(
         with newHandlers: [any CommandHandling],
         preservingActiveOptions: Bool = true
@@ -50,6 +51,11 @@ public final class CommandCenter {
             preservingActiveOptions ? states.compactMapValues(\.activeOptionID) : [:]
 
         deactivateAll()
+        // Detach the outgoing handlers first: work already in flight would otherwise
+        // report into the registry entry now owned by their replacement.
+        for handler in handlers.values {
+            handler.stateDidChange = nil
+        }
         handlers.removeAll()
         descriptors.removeAll()
         states.removeAll()
@@ -57,14 +63,13 @@ public final class CommandCenter {
         register(newHandlers)
 
         for (id, optionID) in wasActive {
-            guard let descriptor = descriptor(for: id),
-                descriptor.options.contains(where: { $0.id == optionID && $0.isEnabled })
+            guard let option = descriptor(for: id)?.options.first(where: { $0.id == optionID }),
+                option.isEnabled,
+                option.latches
             else { continue }
             _ = try? perform(.activate(optionID: optionID), on: id)
         }
     }
-
-    // MARK: - Lookup
 
     public func descriptor(for id: CommandID) -> CommandDescriptor? {
         descriptors.first { $0.id == id }
@@ -116,9 +121,13 @@ public final class CommandCenter {
     }
 
     /// Re-reads every handler's state (used after wake, or on a timer).
+    ///
+    /// Only writes what actually moved: an unconditional assignment fires every observer
+    /// on every tick, which redraws the panel and re-runs the menu bar bridge for nothing.
     public func refresh() {
         for (id, handler) in handlers {
-            states[id] = handler.state
+            let current = handler.state
+            if states[id] != current { states[id] = current }
         }
     }
 

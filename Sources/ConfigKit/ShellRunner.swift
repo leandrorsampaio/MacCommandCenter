@@ -48,8 +48,9 @@ enum ShellRunner {
 
     private static func execute(_ action: ShellAction) -> ShellResult {
         let process = Process()
-        // A login shell, so PATH, rbenv/nvm shims and aliases behave the way they do in
-        // the user's own terminal — which is where these commands were written.
+        // A login shell, so .zprofile and .zlogin run and PATH picks up version-manager
+        // shims. Note zsh reads .zshrc only for interactive shells, so aliases defined
+        // there are deliberately not available here.
         process.executableURL = URL(fileURLWithPath: "/bin/zsh")
         process.arguments = ["-lc", action.command]
 
@@ -70,21 +71,29 @@ enum ShellRunner {
         }
 
         // Read on a worker so a chatty command cannot fill the pipe buffer and deadlock
-        // against our own wait.
+        // against our own wait. The buffer is shared with this thread, so it is guarded.
         let outputQueue = DispatchQueue(label: "mcc.shell.output")
-        var collected = Data()
+        let collected = Buffer()
         let finishedReading = DispatchSemaphore(value: 0)
         outputQueue.async {
-            collected = pipe.fileHandleForReading.readDataToEndOfFile()
+            collected.append(pipe.fileHandleForReading.readDataToEndOfFile())
             finishedReading.signal()
         }
 
         // Written by the watchdog, read here: it needs a lock, not a bare Bool.
         let timedOut = Flag()
+        let pid = process.processIdentifier
         let watchdog = DispatchWorkItem {
-            if process.isRunning {
-                timedOut.set()
-                process.terminate()
+            guard process.isRunning else { return }
+            timedOut.set()
+            process.terminate()
+
+            // SIGTERM is a request. A command that traps or ignores it would otherwise
+            // run forever with the button stuck on "Running…", so escalate.
+            DispatchQueue.global().asyncAfter(deadline: .now() + terminationGrace) {
+                if process.isRunning {
+                    kill(pid, SIGKILL)
+                }
             }
         }
         DispatchQueue.global().asyncAfter(
@@ -94,12 +103,34 @@ enum ShellRunner {
         watchdog.cancel()
         _ = finishedReading.wait(timeout: .now() + 2)
 
-        let output = String(data: collected, encoding: .utf8) ?? ""
+        let output = String(data: collected.data, encoding: .utf8) ?? ""
         return ShellResult(
             exitCode: process.terminationStatus,
             output: output,
             timedOut: timedOut.isSet
         )
+    }
+
+    /// How long a command gets to honour SIGTERM before it is killed outright.
+    private static let terminationGrace: TimeInterval = 3
+
+    /// Output shared between the reader queue and the caller. The drain wait can expire,
+    /// so the buffer may still be written while it is read.
+    private final class Buffer: @unchecked Sendable {
+        private let lock = NSLock()
+        private var bytes = Data()
+
+        func append(_ more: Data) {
+            lock.lock()
+            defer { lock.unlock() }
+            bytes.append(more)
+        }
+
+        var data: Data {
+            lock.lock()
+            defer { lock.unlock() }
+            return bytes
+        }
     }
 
     /// A Bool shared between the watchdog queue and the caller.

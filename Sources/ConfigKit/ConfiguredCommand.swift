@@ -49,14 +49,16 @@ public final class ConfiguredCommand: CommandHandling {
                         title: option.title,
                         subtitle: reason,
                         systemImage: option.icon,
-                        isEnabled: false
+                        isEnabled: false,
+                        latches: option.action.latches
                     )
                 }
                 return CommandOption(
                     id: option.id,
                     title: option.title,
                     subtitle: option.subtitle,
-                    systemImage: option.icon
+                    systemImage: option.icon,
+                    latches: option.action.latches
                 )
             }
         )
@@ -93,7 +95,7 @@ public final class ConfiguredCommand: CommandHandling {
 
     static func unavailableReason(for action: ActionSpec) -> String? {
         switch action {
-        case .unavailable(let reason):
+        case .unavailable(let reason, _):
             return reason
         case .shell where !ShellSupport.isAvailable:
             return ShellSupport.unavailableReason
@@ -139,7 +141,7 @@ public final class ConfiguredCommand: CommandHandling {
             }
             runShell(shellAction, optionID: optionID)
 
-        case .unavailable(let reason):
+        case .unavailable(let reason, _):
             throw CommandError.failed(reason)
         }
     }

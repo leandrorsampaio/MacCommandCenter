@@ -1,3 +1,4 @@
+import AppKit
 import CommandCore
 import Foundation
 
@@ -16,6 +17,10 @@ let bundleIdentifier =
 let port =
     UInt16(ProcessInfo.processInfo.environment["MCC_PORT"] ?? "") ?? ControlServer.defaultPort
 
+/// Everything unreserved in RFC 3986, and nothing else — so `/`, `+` and `%` all escape.
+let pathSegmentAllowed = CharacterSet(
+    charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~")
+
 // MARK: - Transport
 
 struct Reply {
@@ -28,6 +33,7 @@ func send(_ method: String, _ path: String) -> Reply? {
     var request = URLRequest(url: url)
     request.httpMethod = method
     request.timeoutInterval = 3
+    request.setValue("1", forHTTPHeaderField: ControlServer.clientHeaderName)
 
     var reply: Reply?
     let semaphore = DispatchSemaphore(value: 0)
@@ -44,6 +50,20 @@ func send(_ method: String, _ path: String) -> Reply? {
 /// Sends a request; if the app isn't running, launches it and retries.
 func sendOrLaunch(_ method: String, _ path: String) -> Reply {
     if let reply = send(method, path) { return reply }
+
+    // Only launch when nothing is running. `open` on a running instance toggles the
+    // panel onto the screen, which is a surprising side effect of a failed status call.
+    let alreadyRunning =
+        !NSRunningApplication
+        .runningApplications(withBundleIdentifier: bundleIdentifier).isEmpty
+    if alreadyRunning {
+        fail(
+            """
+            Mac Command Center is running, but its control API is off.
+
+            Turn it on in Settings > Advanced > Enable the local control API.
+            """)
+    }
 
     FileHandle.standardError.write(Data("Mac Command Center isn't running — launching it…\n".utf8))
     let launcher = Process()
@@ -140,7 +160,10 @@ let arguments = Array(CommandLine.arguments.dropFirst())
 
 func invoke(command: String, verb: String, option: String?) -> Never {
     // A config may name a command in any language, and that name reaches us verbatim.
-    let escaped = command.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? command
+    // `.urlPathAllowed` leaves `/` and `+` alone, which the server would then read as a
+    // separator and a space, so the set is narrowed here.
+    let escaped =
+        command.addingPercentEncoding(withAllowedCharacters: pathSegmentAllowed) ?? command
     var path = "/v1/commands/\(escaped)/\(verb)"
     if let option,
         let escaped = option.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)

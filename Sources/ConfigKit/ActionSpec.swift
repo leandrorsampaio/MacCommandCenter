@@ -20,9 +20,9 @@ public enum ActionSpec: Sendable, Equatable {
     /// just because someone clicked a nice-looking button.
     case shell(ShellAction)
 
-    /// A recognised action the running build cannot perform, kept so the button can
-    /// explain itself rather than vanishing.
-    case unavailable(reason: String)
+    /// An action this build cannot perform or did not understand. Carries the original
+    /// payload so that re-saving the config does not destroy what it said.
+    case unavailable(reason: String, raw: RawAction?)
 
     /// True when activating this action leaves lasting state to turn off again.
     public var latches: Bool {
@@ -48,6 +48,34 @@ public enum ShellSupport {
     }
 
     public static let unavailableReason = "Needs the direct download build"
+}
+
+/// An action exactly as it appeared in the file. Kept verbatim for anything this build
+/// cannot interpret, so a config written for a newer version survives a round trip here.
+public struct RawAction: Sendable, Equatable, Codable {
+
+    public var type: String
+    public var mode: String?
+    public var url: String?
+    public var command: String?
+    public var timeout: Double?
+    public var detached: Bool?
+
+    public init(
+        type: String,
+        mode: String? = nil,
+        url: String? = nil,
+        command: String? = nil,
+        timeout: Double? = nil,
+        detached: Bool? = nil
+    ) {
+        self.type = type
+        self.mode = mode
+        self.url = url
+        self.command = command
+        self.timeout = timeout
+        self.detached = detached
+    }
 }
 
 public enum KeepAwakeMode: String, Sendable, Codable, CaseIterable {

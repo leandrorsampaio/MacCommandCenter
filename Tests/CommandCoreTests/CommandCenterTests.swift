@@ -12,7 +12,7 @@ private final class StubCommand: CommandHandling {
 
     let descriptor: CommandDescriptor
 
-    init(id: String, options: [String], enabled: Bool = true) {
+    init(id: String, options: [String], enabled: Bool = true, latches: Bool = true) {
         descriptor = CommandDescriptor(
             id: CommandID(id),
             title: id,
@@ -21,7 +21,8 @@ private final class StubCommand: CommandHandling {
             kind: .mode,
             group: "Test",
             options: options.map {
-                CommandOption(id: $0, title: $0, systemImage: "circle", isEnabled: enabled)
+                CommandOption(
+                    id: $0, title: $0, systemImage: "circle", isEnabled: enabled, latches: latches)
             }
         )
     }
@@ -148,6 +149,30 @@ struct CommandCenterTests {
         center.replaceAll(with: [StubCommand(id: "a", options: ["one"], enabled: false)])
 
         #expect(center.state(for: "a").isActive == false)
+    }
+
+    /// A one-shot option must never be re-fired by a registry swap: the same id can mean
+    /// "stay awake" in one config and "run this command" in another.
+    @Test func replaceAllNeverRestoresOneShotOptions() throws {
+        let center = CommandCenter()
+        center.register(StubCommand(id: "a", options: ["one"]))
+        try center.perform(.activate(optionID: "one"), on: "a")
+
+        center.replaceAll(with: [StubCommand(id: "a", options: ["one"], latches: false)])
+
+        #expect(center.state(for: "a").isActive == false)
+    }
+
+    /// Work already in flight must not report into the entry its replacement now owns.
+    @Test func replacedHandlersAreDetachedFromTheRegistry() throws {
+        let center = CommandCenter()
+        let outgoing = StubCommand(id: "a", options: ["one"])
+        center.register(outgoing)
+        center.replaceAll(with: [StubCommand(id: "a", options: ["two"])])
+
+        outgoing.finishLater(as: "one")
+
+        #expect(center.state(for: "a").activeOptionID != "one")
     }
 
     @Test func replaceAllCanBeToldNotToPreserve() throws {

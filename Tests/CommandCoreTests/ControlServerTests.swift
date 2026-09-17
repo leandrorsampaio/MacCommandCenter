@@ -45,10 +45,21 @@ struct ControlServerTests {
         return (center, ControlServer(center: center, port: port))
     }
 
-    private func get(_ path: String, port: UInt16) async throws -> (Int, String) {
+    private func get(
+        _ path: String,
+        port: UInt16,
+        clientHeader: Bool = true,
+        origin: String? = nil
+    ) async throws -> (Int, String) {
         let url = URL(string: "http://127.0.0.1:\(port)\(path)")!
         var request = URLRequest(url: url)
         request.timeoutInterval = 5
+        if clientHeader {
+            request.setValue("1", forHTTPHeaderField: ControlServer.clientHeaderName)
+        }
+        if let origin {
+            request.setValue(origin, forHTTPHeaderField: "Origin")
+        }
         let (data, response) = try await URLSession.shared.data(for: request)
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
         return (status, String(data: data, encoding: .utf8) ?? "")
@@ -84,6 +95,30 @@ struct ControlServerTests {
         let (offStatus, _) = try await get("/v1/commands/keep-awake/deactivate", port: port)
         #expect(offStatus == 200)
         #expect(center.state(for: "keep-awake").isActive == false)
+    }
+
+    /// A web page can reach loopback with a simple cross-origin request, so anything
+    /// that changes state has to require something a browser cannot send.
+    @Test func mutationsRequireTheClientHeaderAndNoOrigin() async throws {
+        let port = freePort()
+        let (center, server) = makeServer(port: port)
+        server.start()
+        defer { server.stop() }
+        try await waitUntilRunning(server)
+
+        let route = "/v1/commands/keep-awake/activate?option=display-off"
+
+        let (noHeader, _) = try await get(route, port: port, clientHeader: false)
+        #expect(noHeader == 403)
+        #expect(center.state(for: "keep-awake").isActive == false)
+
+        let (withOrigin, _) = try await get(route, port: port, origin: "https://evil.example")
+        #expect(withOrigin == 403)
+        #expect(center.state(for: "keep-awake").isActive == false)
+
+        // Reading stays open: it changes nothing.
+        let (readOnly, _) = try await get("/v1/state", port: port, clientHeader: false)
+        #expect(readOnly == 200)
     }
 
     @Test func reportsUnknownRoutesAndOptions() async throws {

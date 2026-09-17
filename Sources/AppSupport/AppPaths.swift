@@ -34,6 +34,46 @@ public enum AppPaths {
         applicationSupport.appendingPathComponent("Configs", isDirectory: true)
     }
 
+    public enum ImportError: LocalizedError {
+        case alreadyInPlace
+
+        public var errorDescription: String? {
+            switch self {
+            case .alreadyInPlace: return "That item is already in this folder."
+            }
+        }
+    }
+
+    /// Copies a user-chosen file or folder into one of our folders.
+    ///
+    /// Staged first, then swapped: removing the destination up front meant a failed copy
+    /// destroyed what was already there, and re-importing something already inside the
+    /// folder deleted the very thing being imported.
+    public static func importItem(from source: URL, into folder: URL) throws {
+        let folder = ensure(folder)
+        let destination = folder.appendingPathComponent(source.lastPathComponent)
+
+        let resolvedSource = source.resolvingSymlinksInPath().standardizedFileURL
+        guard resolvedSource != destination.resolvingSymlinksInPath().standardizedFileURL else {
+            throw ImportError.alreadyInPlace
+        }
+
+        let fileManager = FileManager.default
+        let staged = folder.appendingPathComponent(".importing-\(UUID().uuidString)")
+        try fileManager.copyItem(at: source, to: staged)
+
+        do {
+            if fileManager.fileExists(atPath: destination.path) {
+                _ = try fileManager.replaceItemAt(destination, withItemAt: staged)
+            } else {
+                try fileManager.moveItem(at: staged, to: destination)
+            }
+        } catch {
+            try? fileManager.removeItem(at: staged)
+            throw error
+        }
+    }
+
     @discardableResult
     public static func ensure(_ url: URL) -> URL {
         try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)

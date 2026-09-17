@@ -58,6 +58,10 @@ final class FloatingPanelController {
     private let panel = FloatingPanelWindow()
     private let hosting: NSHostingController<ControlPanelView>
     private var hasPositioned = false
+    /// Whether a saved frame was restored. Checked at init, because `fitToContent()`
+    /// moves the window and would otherwise make every launch look like a restore.
+    private var hasRestoredFrame = false
+    private static let autosaveName = "MacCommandCenterPanel"
 
     var isVisible: Bool { panel.isVisible }
 
@@ -65,7 +69,8 @@ final class FloatingPanelController {
         hosting = NSHostingController(rootView: rootView)
         hosting.sizingOptions = [.preferredContentSize]
         panel.contentViewController = hosting
-        panel.setFrameAutosaveName("MacCommandCenterPanel")
+        panel.setFrameAutosaveName(Self.autosaveName)
+        hasRestoredFrame = panel.setFrameUsingName(Self.autosaveName)
         setFloatsOnTop(floatsOnTop)
     }
 
@@ -76,7 +81,7 @@ final class FloatingPanelController {
         fitToContent()
 
         if !hasPositioned {
-            positionUnderMenuBar(button)
+            if !hasRestoredFrame { positionUnderMenuBar(button) }
             hasPositioned = true
         }
         clampToScreen()
@@ -132,9 +137,6 @@ final class FloatingPanelController {
 
     /// First run only: drop it just under the menu bar item.
     private func positionUnderMenuBar(_ button: NSStatusBarButton?) {
-        // A restored autosaved frame already sits somewhere sensible.
-        if panel.frame.minX != 0 || panel.frame.minY != 0 { return }
-
         let size = panel.frame.size
         var origin = NSPoint(x: 0, y: 0)
 

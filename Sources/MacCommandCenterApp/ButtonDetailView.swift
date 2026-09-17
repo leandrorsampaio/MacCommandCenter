@@ -121,7 +121,7 @@ struct ButtonDetailView: View {
                 .foregroundStyle(supportsShell ? Color.secondary : Color.orange)
             }
 
-        case .unavailable(let reason):
+        case .unavailable(let reason, _):
             Label(reason, systemImage: "exclamationmark.triangle")
                 .font(.caption)
                 .foregroundStyle(.orange)

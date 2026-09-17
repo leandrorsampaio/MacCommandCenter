@@ -104,7 +104,9 @@ private struct CommandTile: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .keyboardShortcut(KeyEquivalent(Character("\(shortcutNumber)")), modifiers: [])
+        // Only the first nine get a digit: Character("10") is two grapheme clusters and
+        // traps, and there is no sensible single-key shortcut past 9 anyway.
+        .modifier(DigitShortcut(number: shortcutNumber))
         .accessibilityAddTraits(isActive ? [.isSelected] : [])
         .help(isActive ? "Click to turn off" : option.subtitle)
     }
@@ -115,5 +117,19 @@ private struct CommandTile: View {
 
     private var subtitleColor: Color {
         (isActive ? skin.colors.buttonSubtextActive : skin.colors.buttonSubtext).color
+    }
+}
+
+/// Binds digit keys 1–9 to the first nine options, and nothing beyond that.
+private struct DigitShortcut: ViewModifier {
+
+    let number: Int
+
+    func body(content: Content) -> some View {
+        if (1...9).contains(number), let digit = "\(number)".first {
+            content.keyboardShortcut(KeyEquivalent(digit), modifiers: [])
+        } else {
+            content
+        }
     }
 }

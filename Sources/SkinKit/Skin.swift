@@ -194,7 +194,9 @@ public struct SkinFontSpec: Sendable, Equatable {
     /// asks for a font the user does not have still renders.
     public var font: Font {
         if let family, !family.isEmpty, NSFont(name: family, size: size) != nil {
-            return .custom(family, fixedSize: size)
+            // `.weight` still applies to a custom family; dropping it silently ignored
+            // every skin's weight, the built-in one included.
+            return .custom(family, fixedSize: size).weight(weight)
         }
         return .system(size: size, weight: weight, design: monospaced ? .monospaced : .default)
     }

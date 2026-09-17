@@ -95,8 +95,14 @@ or a hardware button box.
 
 ```bash
 mcc awake display-off
-curl "http://127.0.0.1:8787/v1/commands/keep-awake/toggle?option=display-off"
+curl -H "X-MCC-Client: 1" \
+  "http://127.0.0.1:8787/v1/commands/keep-awake/toggle?option=display-off"
 ```
+
+Reading is open; anything that **changes** state must send `X-MCC-Client` and no `Origin`
+header. A web page can reach loopback with a simple cross-origin request, but it cannot
+set a custom header without a preflight, and none is answered — so this keeps a browser
+from driving your Mac while costing a script or a microcontroller one line.
 
 ## Development
 

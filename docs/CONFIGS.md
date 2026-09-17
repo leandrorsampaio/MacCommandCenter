@@ -82,8 +82,9 @@ Hands the URL to whatever normally opens it. Fires once, does not latch.
 { "type": "shell", "command": "open -a Terminal", "detached": true }
 ```
 
-Runs through `/bin/zsh -lc`, so your `PATH`, version managers and aliases behave the way
-they do in your terminal. The first line of output appears in the readout.
+Runs through `/bin/zsh -lc`, a login shell, so `.zprofile` and `.zlogin` are read and your
+`PATH` and version-manager shims work. `.zshrc` is **not** read — zsh only sources it for
+interactive shells — so aliases defined there are unavailable. Call the real command. The first line of output appears in the readout.
 
 - `timeout` — seconds before the command is killed. Default 30.
 - `detached` — fire and forget, for anything long-running. Output is discarded.

@@ -95,8 +95,11 @@ public final class SkinCatalog {
 
         var results: [URL] = []
         for entry in entries.sorted(by: { $0.lastPathComponent < $1.lastPathComponent }) {
+            // Resolve first: a symlink reports isDirectory == false and would be skipped,
+            // quietly ignoring a folder someone linked in on purpose.
+            let resolved = entry.resolvingSymlinksInPath()
             let isDirectory =
-                (try? entry.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory ?? false
+                (try? resolved.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory ?? false
             if isDirectory {
                 let manifest = entry.appendingPathComponent("skin.json")
                 if fileManager.fileExists(atPath: manifest.path) { results.append(manifest) }
@@ -159,12 +162,7 @@ public final class SkinCatalog {
     /// Copies a skin chosen by the user into the app's own folder. Under the sandbox this
     /// is the only way in, and it is friendlier than naming a container path.
     public func importSkin(from source: URL) throws {
-        let destination = AppPaths.ensure(AppPaths.skins)
-            .appendingPathComponent(source.lastPathComponent)
-        if FileManager.default.fileExists(atPath: destination.path) {
-            try FileManager.default.removeItem(at: destination)
-        }
-        try FileManager.default.copyItem(at: source, to: destination)
+        try AppPaths.importItem(from: source, into: AppPaths.skins)
         reload()
     }
 

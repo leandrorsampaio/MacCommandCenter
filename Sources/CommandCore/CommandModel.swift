@@ -42,19 +42,25 @@ public struct CommandOption: Identifiable, Hashable, Codable, Sendable {
     /// False when the running build cannot perform this option's action. The button stays
     /// visible and explains itself rather than disappearing.
     public let isEnabled: Bool
+    /// True when activating this option leaves state to turn off again, rather than
+    /// doing something once. Only latching options may be restored across a registry
+    /// swap — re-firing a one-shot action would run it with nobody asking.
+    public let latches: Bool
 
     public init(
         id: String,
         title: String,
         subtitle: String = "",
         systemImage: String,
-        isEnabled: Bool = true
+        isEnabled: Bool = true,
+        latches: Bool = false
     ) {
         self.id = id
         self.title = title
         self.subtitle = subtitle
         self.systemImage = systemImage
         self.isEnabled = isEnabled
+        self.latches = latches
     }
 
     public init(from decoder: Decoder) throws {
@@ -64,6 +70,7 @@ public struct CommandOption: Identifiable, Hashable, Codable, Sendable {
         subtitle = try container.decodeIfPresent(String.self, forKey: .subtitle) ?? ""
         systemImage = try container.decodeIfPresent(String.self, forKey: .systemImage) ?? "circle"
         isEnabled = try container.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? true
+        latches = try container.decodeIfPresent(Bool.self, forKey: .latches) ?? false
     }
 }
 

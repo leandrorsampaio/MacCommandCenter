@@ -8,6 +8,41 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+Following an external review (`review_claude_fable_5_1.md`):
+
+- **Switching or reloading a config could run a shell command with no click.** The
+  registry restored "still active" option ids across a swap without knowing what they do,
+  so an id that meant *stay awake* in one config and *run this command* in another fired
+  the command — silently if that exact text had ever been approved. Options now declare
+  whether they latch, and only latching ones are restored.
+- **Any local client could crash the app** with `Content-Length: -1`: the body index
+  walked off the front of the buffer and trapped.
+- **A shell command still running when the config reloaded** reported into the registry
+  entry its replacement now owned. Outgoing handlers are detached first.
+- **The shell timeout could not kill anything that ignores SIGTERM.** It now escalates to
+  SIGKILL, instead of leaving a button stuck on "Running…" forever.
+- **"Saving reloads the panel" was false for editors that write in place.** A directory
+  vnode source only sees entries added, removed or renamed. A content fingerprint is now
+  polled as a backstop.
+- **The control API changed state on unauthenticated requests** that a web page can issue
+  cross-origin. Mutations now require `X-MCC-Client` and no `Origin`.
+- **Command ids containing `/`, `+` or `%2F` were unreachable**: the path was decoded
+  before it was split.
+- **Settings crashed on a huge `timeout`** (`Int(Double)` trap), and a command with ten or
+  more options trapped on `Character("10")`.
+- **Actions this build cannot read lost their payload on save**, so opening someone's
+  config and saving it destroyed what it said.
+- **Import deleted the destination before copying**, so a failed copy destroyed what was
+  there and re-importing an item already in the folder deleted it.
+- The first-run panel landed bottom-left: `fitToContent()` moved the window before the
+  "frame still at zero" check could run.
+- Skin font `weight` was ignored whenever a family was named.
+- `mcc` with the API off ran `open`, toggling the panel onto the screen before failing.
+- Symlinked skin and config folders were silently ignored.
+- The shell output buffer was read while a worker could still be writing it.
+- The 10-second refresh timer rewrote every state entry, waking every observer for nothing.
+- Documentation promised shell aliases; `zsh -lc` never reads `.zshrc`.
+
 - **An active Keep Awake no longer switches itself off when a config file changes.** The
   folder watcher rebuilt the command registry on any change in the directory, which turned
   off whatever was running — so saving an unrelated button let the Mac sleep in the middle

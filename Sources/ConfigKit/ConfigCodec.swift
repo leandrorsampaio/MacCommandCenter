@@ -40,14 +40,9 @@ enum ConfigCodec {
         var action: Action
     }
 
-    struct Action: Codable {
-        var type: String
-        var mode: String?
-        var url: String?
-        var command: String?
-        var timeout: Double?
-        var detached: Bool?
-    }
+    /// The wire shape of an action is the public `RawAction`, so an unrecognised one
+    /// can be carried through untouched.
+    typealias Action = RawAction
 
     // MARK: - Decoding
 
@@ -98,7 +93,7 @@ enum ConfigCodec {
 
         case "openURL":
             guard let string = action.url, let url = URL(string: string), url.scheme != nil else {
-                return .unavailable(reason: "This button has no valid URL.")
+                return .unavailable(reason: "This button has no valid URL.", raw: action)
             }
             return .openURL(url)
 
@@ -106,19 +101,21 @@ enum ConfigCodec {
             guard let command = action.command,
                 !command.trimmingCharacters(in: .whitespaces).isEmpty
             else {
-                return .unavailable(reason: "This button has no command to run.")
+                return .unavailable(reason: "This button has no command to run.", raw: action)
             }
             // Always decoded, even where it cannot run: dropping it here would erase
             // the command text the next time the config was saved.
             return .shell(
                 ShellAction(
                     command: command,
-                    timeout: action.timeout ?? 30,
+                    // Clamped at the boundary: unclamped, this reached a Stepper label as
+                    // Int(Double) and trapped the app on a config nobody vetted.
+                    timeout: (action.timeout ?? 30).clamped(to: 1...3600),
                     detached: action.detached ?? false
                 ))
 
         default:
-            return .unavailable(reason: "Unknown action type '\(action.type)'.")
+            return .unavailable(reason: "Unknown action type '\(action.type)'.", raw: action)
         }
     }
 
@@ -175,9 +172,18 @@ enum ConfigCodec {
                 timeout: shell.timeout,
                 detached: shell.detached
             )
-        case .unavailable:
-            // Round-trips as a no-op rather than silently dropping the button.
-            return Action(type: "unavailable")
+        case .unavailable(_, let raw):
+            // The original payload, verbatim. Re-encoding this as a placeholder erased
+            // whatever the file actually said the next time it was saved.
+            return raw ?? Action(type: "unavailable")
         }
+    }
+}
+
+extension Double {
+    /// NaN and infinity both slip through a plain `min`/`max` pair, so they are handled.
+    func clamped(to range: ClosedRange<Double>) -> Double {
+        guard isFinite else { return range.lowerBound }
+        return Swift.min(Swift.max(self, range.lowerBound), range.upperBound)
     }
 }

@@ -13,6 +13,10 @@ public final class ControlServer {
 
     public nonisolated static let defaultPort: UInt16 = 8787
 
+    /// Required on anything that changes state. See the guard in `respond`.
+    public nonisolated static let clientHeaderName = "X-MCC-Client"
+    nonisolated static let clientHeader = "x-mcc-client"
+
     public private(set) var isRunning = false
     public private(set) var lastError: String?
     public let port: UInt16
@@ -91,7 +95,7 @@ public final class ControlServer {
     // MARK: - Routing
 
     private func respond(to request: HTTPRequest) -> HTTPResponse {
-        let segments = request.path.split(separator: "/").map(String.init)
+        let segments = request.pathSegments
 
         switch segments {
         case []:
@@ -104,6 +108,19 @@ public final class ControlServer {
             let id = CommandID(parts[2])
             let verb = parts[3]
             let option = request.query["option"] ?? request.query["mode"]
+
+            // A browser can send a cross-origin GET or simple POST to loopback without
+            // CORS stopping the request — only the response is hidden. It cannot set a
+            // custom header without a preflight, and no preflight is answered here, so
+            // this keeps a web page from driving the API while costing a script or a
+            // firmware client one extra line.
+            guard request.headers[Self.clientHeader] != nil, request.headers["origin"] == nil
+            else {
+                return .failure(
+                    "Mutating requests must send the \(Self.clientHeaderName) header and no Origin.",
+                    status: 403
+                )
+            }
 
             let commandRequest: CommandRequest
             switch verb {

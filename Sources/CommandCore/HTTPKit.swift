@@ -5,7 +5,11 @@ import Network
 public struct HTTPRequest: Sendable {
     public let method: String
     public let path: String
+    /// The path split on `/` and *then* percent-decoded, so an id containing an escaped
+    /// slash stays one segment instead of silently becoming two.
+    public let pathSegments: [String]
     public let query: [String: String]
+    public let headers: [String: String]
     public let body: Data
 }
 
@@ -125,11 +129,17 @@ final class HTTPSession {
         let target = String(parts[1])
 
         var contentLength = 0
+        var headers: [String: String] = [:]
         for line in lines.dropFirst() {
             let pieces = line.split(separator: ":", maxSplits: 1)
             guard pieces.count == 2 else { continue }
+            headers[pieces[0].trimmingCharacters(in: .whitespaces).lowercased()] =
+                pieces[1].trimmingCharacters(in: .whitespaces)
             if pieces[0].trimmingCharacters(in: .whitespaces).lowercased() == "content-length" {
-                contentLength = Int(pieces[1].trimmingCharacters(in: .whitespaces)) ?? 0
+                // A negative value walked the body index off the front of the buffer and
+                // trapped; an absurd one would wait forever. Both are just malformed.
+                let declared = Int(pieces[1].trimmingCharacters(in: .whitespaces)) ?? 0
+                contentLength = min(max(declared, 0), maximumRequestSize)
             }
         }
 
@@ -139,27 +149,51 @@ final class HTTPSession {
 
         let body = Data(data[bodyStart..<data.index(bodyStart, offsetBy: contentLength)])
 
-        let (path, query) = splitTarget(target)
-        return HTTPRequest(method: method, path: path, query: query, body: body)
+        let (path, segments, query) = splitTarget(target)
+        return HTTPRequest(
+            method: method,
+            path: path,
+            pathSegments: segments,
+            query: query,
+            headers: headers,
+            body: body
+        )
     }
 
-    private static func splitTarget(_ target: String) -> (path: String, query: [String: String]) {
-        guard let separator = target.firstIndex(of: "?") else {
-            return (percentDecoded(target), [:])
+    private static func splitTarget(
+        _ target: String
+    )
+        -> (path: String, segments: [String], query: [String: String])
+    {
+        let rawPath: String
+        let queryString: String
+        if let separator = target.firstIndex(of: "?") {
+            rawPath = String(target[target.startIndex..<separator])
+            queryString = String(target[target.index(after: separator)...])
+        } else {
+            rawPath = target
+            queryString = ""
         }
-        let path = percentDecoded(String(target[target.startIndex..<separator]))
-        let queryString = String(target[target.index(after: separator)...])
+
+        // Segments are decoded individually. `+` means a literal plus in a path; only a
+        // query value spells a space that way.
+        let segments = rawPath.split(separator: "/").map {
+            percentDecoded(String($0), plusIsSpace: false)
+        }
 
         var query: [String: String] = [:]
         for pair in queryString.split(separator: "&") {
             let kv = pair.split(separator: "=", maxSplits: 1)
             guard let key = kv.first else { continue }
-            query[percentDecoded(String(key))] = kv.count > 1 ? percentDecoded(String(kv[1])) : ""
+            query[percentDecoded(String(key), plusIsSpace: true)] =
+                kv.count > 1 ? percentDecoded(String(kv[1]), plusIsSpace: true) : ""
         }
-        return (path, query)
+
+        return (percentDecoded(rawPath, plusIsSpace: false), segments, query)
     }
 
-    private static func percentDecoded(_ string: String) -> String {
-        string.replacingOccurrences(of: "+", with: " ").removingPercentEncoding ?? string
+    private static func percentDecoded(_ string: String, plusIsSpace: Bool) -> String {
+        let prepared = plusIsSpace ? string.replacingOccurrences(of: "+", with: " ") : string
+        return prepared.removingPercentEncoding ?? prepared
     }
 }

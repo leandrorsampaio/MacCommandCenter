@@ -84,8 +84,11 @@ public final class ConfigCatalog {
 
         var results: [URL] = []
         for entry in entries.sorted(by: { $0.lastPathComponent < $1.lastPathComponent }) {
+            // Resolve first: a symlink reports isDirectory == false and would be skipped,
+            // quietly ignoring a folder someone linked in on purpose.
+            let resolved = entry.resolvingSymlinksInPath()
             let isDirectory =
-                (try? entry.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory ?? false
+                (try? resolved.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory ?? false
             if isDirectory {
                 let manifest = entry.appendingPathComponent("config.json")
                 if fileManager.fileExists(atPath: manifest.path) { results.append(manifest) }
@@ -169,12 +172,7 @@ public final class ConfigCatalog {
     /// own folder. This is how importing works under the sandbox, where the app cannot
     /// read arbitrary locations on its own.
     public func importConfig(from source: URL) throws {
-        let destination = AppPaths.ensure(AppPaths.configs)
-            .appendingPathComponent(source.lastPathComponent)
-        if FileManager.default.fileExists(atPath: destination.path) {
-            try FileManager.default.removeItem(at: destination)
-        }
-        try FileManager.default.copyItem(at: source, to: destination)
+        try AppPaths.importItem(from: source, into: AppPaths.configs)
         reload()
     }
 

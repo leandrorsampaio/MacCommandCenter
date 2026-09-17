@@ -96,14 +96,41 @@ struct ConfigCodecTests {
         #expect(action.detached)
     }
 
+    /// Regression: an action this build cannot read used to be rewritten as a
+    /// placeholder, so opening someone's config and saving destroyed it.
+    @Test func unreadableActionsSurviveARoundTrip() throws {
+        let json = ##"""
+            { "groups": [ { "title": "G", "commands": [
+                { "id": "c", "title": "C", "options": [
+                    { "id": "future", "title": "F",
+                      "action": { "type": "teleport", "url": "somewhere://there" } },
+                    { "id": "broken", "title": "B",
+                      "action": { "type": "openURL", "url": "not a url" } } ] } ] } ] }
+            """##
+        let original = try ConfigCodec.decode(
+            Data(json.utf8), fallbackID: "x", folderURL: nil, isBuiltIn: false)
+
+        let reencoded = try ConfigCodec.encode(original)
+        let text = String(data: reencoded, encoding: .utf8) ?? ""
+
+        #expect(text.contains("teleport"), "an unknown action type was erased on save")
+        #expect(text.contains("somewhere://there"), "its payload was erased on save")
+        #expect(text.contains("not a url"), "a malformed URL was erased on save")
+
+        let roundTripped = try ConfigCodec.decode(
+            reencoded, fallbackID: "x", folderURL: nil, isBuiltIn: false)
+        #expect(roundTripped == original)
+    }
+
     @Test func unknownActionTypesBecomeExplainableButtons() {
         let action = ConfigCodec.decodeAction(ConfigCodec.Action(type: "teleport"))
 
-        guard case .unavailable(let reason) = action else {
+        guard case .unavailable(let reason, let raw) = action else {
             Issue.record("expected an unavailable action")
             return
         }
         #expect(reason.contains("teleport"))
+        #expect(raw?.type == "teleport", "the original payload must be kept")
     }
 
     @Test(arguments: [
@@ -164,7 +191,7 @@ struct ActionSpecTests {
         #expect(ActionSpec.keepAwake(mode: .systemOnly).latches)
         #expect(!ActionSpec.openURL(URL(string: "https://example.com")!).latches)
         #expect(!ActionSpec.shell(ShellAction(command: "ls")).latches)
-        #expect(!ActionSpec.unavailable(reason: "nope").latches)
+        #expect(!ActionSpec.unavailable(reason: "nope", raw: nil).latches)
     }
 
     @Test func standardConfigIsSandboxSafe() {
