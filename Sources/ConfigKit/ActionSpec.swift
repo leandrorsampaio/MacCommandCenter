@@ -81,15 +81,21 @@ public struct ShellAction: Sendable, Equatable, Codable {
         self.detached = detached
     }
 
-    /// Stable identity for the consent store. Changing the command revokes consent,
-    /// which is the entire point: an edited command is a new command.
-    public var fingerprint: String {
-        Self.digest(command.trimmingCharacters(in: .whitespacesAndNewlines))
+    /// The exact text consent is granted for. Approval is always checked against this,
+    /// never against the digest alone.
+    public var normalizedCommand: String {
+        command.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    /// FNV-1a. Not a security hash — consent is keyed by it, but the command itself is
-    /// always shown to the user before they approve it, so collisions cannot smuggle
-    /// anything past them.
+    /// Lookup key for the consent store. Changing the command revokes consent, which is
+    /// the entire point: an edited command is a new command.
+    public var fingerprint: String {
+        Self.digest(normalizedCommand)
+    }
+
+    /// FNV-1a, used only to index the store. It is **not** a security boundary: a digest
+    /// this short is cheap to collide deliberately, so a matching key alone must never
+    /// authorise anything. `ShellConsentStore` compares the stored command text.
     static func digest(_ text: String) -> String {
         var hash: UInt64 = 0xcbf29ce484222325
         for byte in Array(text.utf8) {

@@ -9,29 +9,32 @@ public enum ShellConsent: Sendable {
 
 /// Remembers which shell commands the user has approved.
 ///
-/// Consent is keyed by a digest of the command text, so editing a command revokes it —
-/// an edited command is a different command. Nothing here is a security boundary on its
-/// own; the protection is that the exact command is shown before it is ever approved.
+/// The digest is only an index. Approval belongs to an exact command *string*, and that
+/// string is what gets compared — otherwise a config could ship a command crafted to
+/// collide with one the user had already approved and run without ever being shown.
 @MainActor
 @Observable
 public final class ShellConsentStore {
 
     private static let defaultsKey = "approvedShellCommands"
 
-    /// Fingerprint to the command text, kept so Settings can show what was approved.
+    /// Fingerprint to the approved command text, kept so Settings can show what was
+    /// approved and so approval can be verified against the text itself.
     public private(set) var approved: [String: String] = [:]
 
-    public init() {
-        approved =
-            UserDefaults.standard.dictionary(forKey: Self.defaultsKey) as? [String: String] ?? [:]
+    private let defaults: UserDefaults
+
+    public init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        approved = defaults.dictionary(forKey: Self.defaultsKey) as? [String: String] ?? [:]
     }
 
     public func isApproved(_ action: ShellAction) -> Bool {
-        approved[action.fingerprint] != nil
+        approved[action.fingerprint] == action.normalizedCommand
     }
 
     public func approve(_ action: ShellAction) {
-        approved[action.fingerprint] = action.command
+        approved[action.fingerprint] = action.normalizedCommand
         persist()
     }
 
@@ -46,6 +49,6 @@ public final class ShellConsentStore {
     }
 
     private func persist() {
-        UserDefaults.standard.set(approved, forKey: Self.defaultsKey)
+        defaults.set(approved, forKey: Self.defaultsKey)
     }
 }

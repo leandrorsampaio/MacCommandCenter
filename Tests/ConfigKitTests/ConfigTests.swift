@@ -217,3 +217,57 @@ struct ConfigCatalogTests {
         #expect(found.sorted() == ["Beta.json", "config.json"])
     }
 }
+
+@MainActor
+struct ShellConsentStoreTests {
+
+    private func isolatedStore() -> ShellConsentStore {
+        ShellConsentStore(defaults: UserDefaults(suiteName: UUID().uuidString)!)
+    }
+
+    @Test func approvingOneCommandDoesNotApproveAnother() {
+        let store = isolatedStore()
+        store.approve(ShellAction(command: "echo safe"))
+
+        #expect(store.isApproved(ShellAction(command: "echo safe")))
+        #expect(!store.isApproved(ShellAction(command: "rm -rf ~")))
+    }
+
+    /// The digest only indexes the store. If a crafted command ever lands on an approved
+    /// key, the stored text must still refuse it — otherwise a shared config could run
+    /// something the user was never shown.
+    @Test func aMatchingKeyAloneDoesNotAuthorise() {
+        let suite = UserDefaults(suiteName: UUID().uuidString)!
+        let approvedAction = ShellAction(command: "echo safe")
+
+        // Stand in for a digest collision: the approved key now holds different text.
+        suite.set([approvedAction.fingerprint: "rm -rf ~"], forKey: "approvedShellCommands")
+        let store = ShellConsentStore(defaults: suite)
+
+        #expect(store.approved[approvedAction.fingerprint] == "rm -rf ~")
+        #expect(!store.isApproved(approvedAction), "a key match must not be enough on its own")
+    }
+
+    @Test func editingACommandRevokesIt() {
+        let store = isolatedStore()
+        store.approve(ShellAction(command: "make deploy"))
+
+        #expect(!store.isApproved(ShellAction(command: "make deploy --force")))
+    }
+
+    @Test func surroundingWhitespaceDoesNotChangeApproval() {
+        let store = isolatedStore()
+        store.approve(ShellAction(command: "  make deploy  "))
+
+        #expect(store.isApproved(ShellAction(command: "make deploy")))
+    }
+
+    @Test func revokingRemovesApproval() {
+        let store = isolatedStore()
+        let action = ShellAction(command: "echo hi")
+        store.approve(action)
+        store.revoke(fingerprint: action.fingerprint)
+
+        #expect(!store.isApproved(action))
+    }
+}

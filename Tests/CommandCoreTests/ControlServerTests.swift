@@ -56,9 +56,11 @@ struct ControlServerTests {
 
     /// Polls rather than sleeping a fixed amount: NWListener becomes ready asynchronously.
     private func waitUntilRunning(_ server: ControlServer) async throws {
-        for _ in 0..<50 {
+        // Generous: a cold binary on a CI runner takes noticeably longer to bind than a
+        // warm local one, and a slow bind is not a failure.
+        for _ in 0..<100 {
             if server.isRunning { return }
-            try await Task.sleep(for: .milliseconds(50))
+            try await Task.sleep(for: .milliseconds(100))
         }
         Issue.record("server never became ready: \(server.lastError ?? "no error reported")")
     }
