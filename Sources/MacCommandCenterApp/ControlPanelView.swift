@@ -50,8 +50,7 @@ struct ControlPanelView: View {
             }
         }
         .frame(width: skin.metrics.width)
-        .background(skin.colors.panel.color)
-        .bevel(.raised)
+        .skinSurface(skin.colors.panel, bevel: .raised)
         .skin(skin)
         .onPreferenceChange(ContentHeightKey.self) { height in
             contentHeight = height
@@ -177,8 +176,7 @@ private struct PanelChromeButton: View {
                 .font(skin.bodyFont)
                 .foregroundStyle(skin.colors.buttonText.color)
                 .frame(width: 18, height: 18)
-                .background(skin.colors.buttonFace.color)
-                .bevel(.raised)
+                .skinSurface(skin.colors.buttonFace, bevel: .raised)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

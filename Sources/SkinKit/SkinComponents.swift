@@ -129,7 +129,7 @@ public struct ReadoutView: View {
         }
         .padding(skin.metrics.readoutPadding)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(skin.colors.readoutBackground.color)
+        .skinSurface(skin.colors.readoutBackground, bevel: .flat)
         .overlay {
             if skin.effects.scanlines {
                 Canvas { context, size in
@@ -146,6 +146,9 @@ public struct ReadoutView: View {
             }
         }
         .bevel(.sunken)
+        .clipShape(
+            RoundedRectangle(cornerRadius: skin.metrics.cornerRadius, style: .continuous)
+        )
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(primary). \(secondary)")
     }
@@ -186,10 +189,14 @@ public struct ReadoutView: View {
 public struct SkinPushButtonStyle: ButtonStyle {
 
     private let isActive: Bool
+    private let fillsWidth: Bool
     @Environment(\.skin) private var skin
 
-    public init(isActive: Bool = false) {
+    /// `fillsWidth` false keeps the button at its natural size, for use inline beside
+    /// other content rather than as a full-width bar.
+    public init(isActive: Bool = false, fillsWidth: Bool = true) {
         self.isActive = isActive
+        self.fillsWidth = fillsWidth
     }
 
     public func makeBody(configuration: Configuration) -> some View {
@@ -201,10 +208,13 @@ public struct SkinPushButtonStyle: ButtonStyle {
             .foregroundStyle(
                 (isActive ? skin.colors.buttonTextActive : skin.colors.buttonText).color
             )
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: fillsWidth ? .infinity : nil)
             .padding(.vertical, 8)
-            .background((pressedIn ? skin.colors.buttonFacePressed : skin.colors.buttonFace).color)
-            .bevel(pressedIn ? .sunken : .raised)
+            .padding(.horizontal, fillsWidth ? 0 : 10)
+            .skinSurface(
+                pressedIn ? skin.colors.buttonFacePressed : skin.colors.buttonFace,
+                bevel: pressedIn ? .sunken : .raised
+            )
             .contentShape(Rectangle())
     }
 }

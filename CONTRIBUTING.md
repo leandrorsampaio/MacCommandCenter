@@ -59,6 +59,27 @@ If your action can reach outside the app — the filesystem, the network, other 
 it needs the same treatment as shell actions: unavailable under the sandbox, and gated
 behind explicit consent everywhere else.
 
+## Capabilities that were investigated and rejected
+
+Before adding one of these, know that it was looked at and turned down for a reason:
+
+- **Do Not Disturb / Focus modes.** There is no public API to set a Focus mode. Every app
+  that appears to do it is either driving Shortcuts or writing to
+  `~/Library/DoNotDisturb/DB`, which is undocumented, breaks between releases and is not
+  sandbox-reachable. If you want a Focus button today, make it a `shell` action that calls
+  `shortcuts run "…"`, where the Shortcut does the work.
+- **Display brightness.** `CoreDisplay_Display_SetUserBrightness` is private — an App
+  Store rejection — and the public `IODisplaySetFloatParameter` does not affect the
+  built-in display on Apple Silicon. There is no correct way to do this in a sandboxed
+  app.
+- **Audio output switching.** This one *is* feasible:
+  `AudioObjectSetPropertyData` with `kAudioHardwarePropertyDefaultOutputDevice` is public
+  and works under the sandbox. It was left out only because nobody asked for it, not
+  because it cannot be done. It would be a reasonable first contribution.
+- **Skinnable icons.** Icons come from the *config*, not the skin, because the config is
+  what knows what a button means. Letting a skin override them would mean a skin deciding
+  that "Keep Awake" looks like a sun, which is the config author's call.
+
 ## Adding a skin token
 
 1. Add the property to `SkinColors` / `SkinMetrics` / `SkinEffects`, and its name to the

@@ -56,3 +56,30 @@ public extension View {
         modifier(BevelModifier(style: style))
     }
 }
+
+/// Fills a view with a skin colour, clips it to the skin's corner radius and bevels it.
+///
+/// Every surface in the panel goes through this, so `cornerRadius` is honoured whether or
+/// not the skin also draws bevels.
+public struct SkinSurfaceModifier: ViewModifier {
+
+    let color: SkinRGBA
+    let style: BevelStyle
+
+    @Environment(\.skin) private var skin
+
+    public func body(content: Content) -> some View {
+        content
+            .background(color.color)
+            .clipShape(
+                RoundedRectangle(cornerRadius: skin.metrics.cornerRadius, style: .continuous)
+            )
+            .bevel(style)
+    }
+}
+
+extension View {
+    public func skinSurface(_ color: SkinRGBA, bevel style: BevelStyle) -> some View {
+        modifier(SkinSurfaceModifier(color: color, style: style))
+    }
+}

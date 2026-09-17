@@ -94,6 +94,16 @@ Following two external reviews (`review_claude_fable_5_1.md`, `review_gemini_3_8
 
 ### Changed
 
+First pass with the UI actually on screen — screen recording became available, so every
+view was captured and inspected instead of reasoned about:
+
+- The inline **Off** button overflowed the panel's right edge. The push-button style forces
+  full width, which is right for a bar and wrong beside other content.
+- `cornerRadius` reached only the bevel stroke, so a skin that set it and turned bevels off
+  — the shipped **Midnight** does exactly that — got square corners on every surface.
+  Every skinned surface now clips to it.
+
+
 - The panel **scrolls** when a config has more buttons than the display has room for.
   Previously the window was clamped to the screen and the rest was simply clipped, with no
   way to reach it.

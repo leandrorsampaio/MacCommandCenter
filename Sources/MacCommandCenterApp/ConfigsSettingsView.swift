@@ -93,7 +93,8 @@ struct ConfigsSettingsView: View {
                     Button("Delete", role: .destructive) { delete() }
                         .disabled(model.configs.current.isBuiltIn)
                 } label: {
-                    Image(systemName: "ellipsis.circle")
+                    Label("More actions", systemImage: "ellipsis.circle")
+                        .labelStyle(.iconOnly)
                 }
                 .menuStyle(.borderlessButton)
                 .fixedSize()
@@ -154,6 +155,7 @@ struct ConfigsSettingsView: View {
     private var banner: some View {
         HStack(spacing: 8) {
             Image(systemName: "lock.fill")
+                .accessibilityHidden(true)
             Text("“\(draft.name)” ships with the app and cannot be edited.")
             Spacer()
             Button("Duplicate") { duplicate() }
@@ -189,6 +191,7 @@ struct ConfigsSettingsView: View {
                             HStack(spacing: 6) {
                                 Image(systemName: option.icon)
                                     .frame(width: 16)
+                                    .accessibilityHidden(true)
                                 Text(option.title)
                                 Spacer()
                                 Text(Self.actionLabel(option.action))
@@ -225,19 +228,19 @@ struct ConfigsSettingsView: View {
             Button {
                 move(-1)
             } label: {
-                Image(systemName: "arrow.up")
+                Label("Move up", systemImage: "arrow.up").labelStyle(.iconOnly)
             }
             .disabled(selection == nil)
             Button {
                 move(1)
             } label: {
-                Image(systemName: "arrow.down")
+                Label("Move down", systemImage: "arrow.down").labelStyle(.iconOnly)
             }
             .disabled(selection == nil)
             Button(role: .destructive) {
                 removeSelected()
             } label: {
-                Image(systemName: "trash")
+                Label("Delete button", systemImage: "trash").labelStyle(.iconOnly)
             }
             .disabled(selection == nil)
         }

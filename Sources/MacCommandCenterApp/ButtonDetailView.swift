@@ -32,11 +32,13 @@ struct ButtonDetailView: View {
             if NSImage(systemSymbolName: option.icon, accessibilityDescription: nil) != nil {
                 Image(systemName: option.icon)
                     .frame(width: 22)
+                    .accessibilityLabel("Preview of \(option.icon)")
             } else {
                 Image(systemName: "questionmark.square.dashed")
                     .foregroundStyle(.tertiary)
                     .frame(width: 22)
                     .help("No SF Symbol with that name")
+                    .accessibilityLabel("No SF Symbol named \(option.icon)")
             }
         }
     }

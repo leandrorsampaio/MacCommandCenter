@@ -36,6 +36,7 @@ struct CommandSectionView: View {
                     .font(skin.bodyFont)
                     .foregroundStyle(skin.colors.textDim.color)
                     .lineLimit(1)
+                    .truncationMode(.tail)
 
                 Spacer(minLength: 4)
 
@@ -43,10 +44,9 @@ struct CommandSectionView: View {
                     Button(skin.label("Off")) {
                         model.center.tryPerform(.deactivate, on: descriptor.id)
                     }
-                    .buttonStyle(SkinPushButtonStyle(isActive: false))
+                    .buttonStyle(SkinPushButtonStyle(isActive: false, fillsWidth: false))
                     .disabled(!state.isActive)
                     .opacity(state.isActive ? 1 : 0.45)
-                    .fixedSize()
                 }
             }
         }
@@ -70,6 +70,8 @@ private struct CommandTile: View {
                         .font(.system(size: 15))
                         .symbolRenderingMode(.monochrome)
                         .foregroundStyle(titleColor)
+                        // The tile's own text already names it.
+                        .accessibilityHidden(true)
                     Spacer(minLength: 0)
                     LEDView(isOn: isActive)
                 }
@@ -101,8 +103,10 @@ private struct CommandTile: View {
             .multilineTextAlignment(.leading)
             .padding(9)
             .frame(maxWidth: .infinity, minHeight: skin.metrics.tileHeight, alignment: .topLeading)
-            .background((isActive ? skin.colors.buttonFacePressed : skin.colors.buttonFace).color)
-            .bevel(isActive ? .sunken : .raised)
+            .skinSurface(
+                isActive ? skin.colors.buttonFacePressed : skin.colors.buttonFace,
+                bevel: isActive ? .sunken : .raised
+            )
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
