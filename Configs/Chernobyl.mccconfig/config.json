@@ -1,0 +1,58 @@
+{
+  "format": 1,
+  "id": "reactor",
+  "name": "Пульт",
+  "author": "Mac Command Center",
+  "notes": "Cyrillic labels for the Reactor Control skin. A config supplies the words; the skin supplies the look.",
+  "groups": [
+    {
+      "id": "power",
+      "title": "Питание",
+      "commands": [
+        {
+          "id": "keep-awake",
+          "title": "Режим сна",
+          "summary": "Обычный режим сна.",
+          "icon": "cup.and.saucer.fill",
+          "options": [
+            {
+              "id": "display-on",
+              "title": "Экран вкл",
+              "subtitle": "Ничего не спит",
+              "icon": "sun.max.fill",
+              "action": { "type": "keepAwake", "mode": "systemAndDisplay" }
+            },
+            {
+              "id": "display-off",
+              "title": "Экран выкл",
+              "subtitle": "Экран может погаснуть",
+              "icon": "moon.zzz.fill",
+              "action": { "type": "keepAwake", "mode": "systemOnly" }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "control",
+      "title": "Контроль",
+      "commands": [
+        {
+          "id": "az5",
+          "title": "АЗ-5",
+          "summary": "Аварийное гашение экрана.",
+          "icon": "exclamationmark.octagon.fill",
+          "options": [
+            {
+              "id": "scram",
+              "title": "Сброс",
+              "subtitle": "Погасить экран сейчас",
+              "icon": "bolt.slash.fill",
+              "action": { "type": "shell", "command": "pmset displaysleepnow", "timeout": 10 }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

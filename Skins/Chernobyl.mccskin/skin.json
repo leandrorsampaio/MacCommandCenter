@@ -1,0 +1,60 @@
+{
+  "format": 1,
+  "id": "reactor-control",
+  "name": "Reactor Control",
+  "author": "Mac Command Center",
+  "notes": "Sage panel, bakelite keys, amber annunciator. The first light skin.",
+
+  "colors": {
+    "panel": "#8D9880",
+    "panelHighlight": "#B7C1A8",
+    "panelShadow": "#3D4437",
+    "titlebarTop": "#6E7A61",
+    "titlebarBottom": "#4F5947",
+    "titlebarText": "#EAE6D6",
+    "titlebarButtonFace": "#3D4437",
+    "sectionLabel": "#2E3327",
+    "text": "#1F231A",
+    "textDim": "#454C3C",
+    "buttonFace": "#D2CAB1",
+    "buttonFacePressed": "#B4442A",
+    "buttonText": "#1F231A",
+    "buttonTextActive": "#FFF3DC",
+    "buttonSubtext": "#54573F",
+    "buttonSubtextActive": "#F6D8B4",
+    "readoutBackground": "#130F07",
+    "readoutInk": "#FFA820",
+    "readoutInkDim": "#B06B10",
+    "readoutInkIdle": "#5C3B0B",
+    "ledOn": "#FF3A1C",
+    "ledOff": "#494C3A",
+    "visualizerOn": "#FFA820",
+    "visualizerOff": "#3B3317",
+    "accent": "#BE3318"
+  },
+
+  "metrics": {
+    "bevel": 3,
+    "cornerRadius": 2,
+    "padding": 13,
+    "spacing": 12,
+    "tileHeight": 150,
+    "titlebarHeight": 22,
+    "ledSize": 10,
+    "glowRadius": 9,
+    "tracking": 1.4
+  },
+
+  "fonts": {
+    "display": { "family": "PT Sans", "size": 11, "weight": "bold" },
+    "readout": { "family": "PT Mono", "size": 12, "monospaced": true },
+    "body": { "family": "PT Sans", "size": 10 }
+  },
+
+  "effects": {
+    "glow": true,
+    "scanlines": false,
+    "visualizer": true,
+    "uppercase": true
+  }
+}

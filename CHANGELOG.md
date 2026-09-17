@@ -92,6 +92,14 @@ Following two external reviews (`review_claude_fable_5_1.md`, `review_gemini_3_8
 - The panel could restore off-screen — a saved frame of `y = -154` left no way to drag it
   back. Frames are now clamped to the visible screen.
 
+### Added
+
+- **Reactor Control**, a fifth skin: sage panel, bakelite keys, amber annunciator. The
+  first *light* skin, which is what proved the colour tokens were never secretly dark-only.
+- **Пульт**, a Cyrillic config to pair with it — the clearest demonstration so far that a
+  skin supplies the look and a config supplies the words. PT Sans and PT Mono ship with
+  macOS and are ParaType faces, so the Cyrillic needs no download.
+
 ### Changed
 
 First pass with the UI actually on screen — screen recording became available, so every
