@@ -1,0 +1,195 @@
+import AppKit
+import AppSupport
+import Observation
+
+/// Finds, loads and watches configs — the behaviour half of the app, mirroring
+/// `SkinCatalog` on the appearance side.
+@MainActor
+@Observable
+public final class ConfigCatalog {
+
+    public private(set) var configs: [AppConfig] = [.standard]
+    /// Human-readable load failures, shown in Settings so an author sees their typo.
+    public private(set) var problems: [String] = []
+
+    public var selectedID: String {
+        didSet { UserDefaults.standard.set(selectedID, forKey: Self.defaultsKey) }
+    }
+
+    public var current: AppConfig {
+        configs.first { $0.id == selectedID } ?? configs.first ?? .standard
+    }
+
+    private static let defaultsKey = "selectedConfigID"
+
+    @ObservationIgnored private let watcher = DirectoryWatcher()
+
+    public init() {
+        selectedID = UserDefaults.standard.string(forKey: Self.defaultsKey) ?? AppConfig.standard.id
+        installStarterConfigIfNeeded()
+        reload()
+        watcher.start(watching: AppPaths.configs) { [weak self] in
+            self?.reload()
+        }
+    }
+
+    // MARK: - Loading
+
+    public func reload() {
+        var loaded: [AppConfig] = [.standard]
+        var failures: [String] = []
+
+        let sources: [(URL?, Bool)] = [
+            (Bundle.main.resourceURL?.appendingPathComponent("Configs", isDirectory: true), true),
+            (AppPaths.configs, false),
+        ]
+
+        for (directory, isBuiltIn) in sources {
+            guard let directory else { continue }
+            for manifest in Self.manifestURLs(in: directory) {
+                do {
+                    let config = try Self.load(at: manifest, isBuiltIn: isBuiltIn)
+                    // A user config reusing a built-in id replaces it.
+                    loaded.removeAll { $0.id == config.id }
+                    loaded.append(config)
+                } catch {
+                    failures.append(
+                        "\(manifest.deletingLastPathComponent().lastPathComponent): \(error.localizedDescription)"
+                    )
+                }
+            }
+        }
+
+        configs = loaded.sorted { lhs, rhs in
+            if lhs.isBuiltIn != rhs.isBuiltIn { return lhs.isBuiltIn && !rhs.isBuiltIn }
+            return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+        }
+        problems = failures
+
+        if !configs.contains(where: { $0.id == selectedID }) {
+            selectedID = configs.first?.id ?? AppConfig.standard.id
+        }
+    }
+
+    /// Accepts `Name.mccconfig/config.json`, `Name/config.json` and a bare `Name.json`.
+    nonisolated static func manifestURLs(in directory: URL) -> [URL] {
+        let fileManager = FileManager.default
+        guard
+            let entries = try? fileManager.contentsOfDirectory(
+                at: directory,
+                includingPropertiesForKeys: [.isDirectoryKey],
+                options: [.skipsHiddenFiles]
+            )
+        else { return [] }
+
+        var results: [URL] = []
+        for entry in entries.sorted(by: { $0.lastPathComponent < $1.lastPathComponent }) {
+            let isDirectory =
+                (try? entry.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory ?? false
+            if isDirectory {
+                let manifest = entry.appendingPathComponent("config.json")
+                if fileManager.fileExists(atPath: manifest.path) { results.append(manifest) }
+            } else if entry.pathExtension.lowercased() == "json" {
+                results.append(entry)
+            }
+        }
+        return results
+    }
+
+    nonisolated static func load(at url: URL, isBuiltIn: Bool) throws -> AppConfig {
+        let data = try Data(contentsOf: url)
+        let isPackage = url.lastPathComponent == "config.json"
+        let fallbackID = (isPackage ? url.deletingLastPathComponent() : url)
+            .deletingPathExtension()
+            .lastPathComponent
+        return try ConfigCodec.decode(
+            data,
+            fallbackID: fallbackID,
+            folderURL: isPackage ? url.deletingLastPathComponent() : nil,
+            isBuiltIn: isBuiltIn
+        )
+    }
+
+    // MARK: - Writing
+
+    /// Saves an edited config back to its folder. Built-in configs are never written to;
+    /// the editor duplicates them first.
+    public func save(_ config: AppConfig) throws {
+        guard !config.isBuiltIn else { return }
+        let folder =
+            config.folderURL
+            ?? AppPaths.configs
+            .appendingPathComponent("\(config.name).mccconfig", isDirectory: true)
+        AppPaths.ensure(folder)
+        let data = try ConfigCodec.encode(config)
+        try data.write(to: folder.appendingPathComponent("config.json"), options: .atomic)
+        reload()
+    }
+
+    /// Copies a config into the user folder under a new id, so built-ins can be a
+    /// starting point without being edited in place.
+    @discardableResult
+    public func duplicate(_ config: AppConfig) throws -> AppConfig {
+        let baseName = config.name + " Copy"
+        var name = baseName
+        var suffix = 2
+        while configs.contains(where: { $0.name == name }) {
+            name = "\(baseName) \(suffix)"
+            suffix += 1
+        }
+
+        var copy = config
+        copy.name = name
+        copy.id = Self.identifier(from: name)
+        copy.isBuiltIn = false
+        copy.folderURL = AppPaths.configs.appendingPathComponent(
+            "\(name).mccconfig", isDirectory: true)
+        try save(copy)
+        return copy
+    }
+
+    public func delete(_ config: AppConfig) throws {
+        guard !config.isBuiltIn, let folder = config.folderURL else { return }
+        try FileManager.default.trashItem(at: folder, resultingItemURL: nil)
+        reload()
+    }
+
+    nonisolated static func identifier(from name: String) -> String {
+        let slug = name.lowercased()
+            .map { $0.isLetter || $0.isNumber ? String($0) : "-" }
+            .joined()
+            .split(separator: "-", omittingEmptySubsequences: true)
+            .joined(separator: "-")
+        return slug.isEmpty ? UUID().uuidString : slug
+    }
+
+    // MARK: - Importing
+
+    /// Copies a `.mccconfig` folder or `.json` file chosen by the user into the app's
+    /// own folder. This is how importing works under the sandbox, where the app cannot
+    /// read arbitrary locations on its own.
+    public func importConfig(from source: URL) throws {
+        let destination = AppPaths.ensure(AppPaths.configs)
+            .appendingPathComponent(source.lastPathComponent)
+        if FileManager.default.fileExists(atPath: destination.path) {
+            try FileManager.default.removeItem(at: destination)
+        }
+        try FileManager.default.copyItem(at: source, to: destination)
+        reload()
+    }
+
+    public func revealFolder() {
+        NSWorkspace.shared.selectFile(
+            nil, inFileViewerRootedAtPath: AppPaths.ensure(AppPaths.configs).path)
+    }
+
+    // MARK: - Authoring
+
+    private func installStarterConfigIfNeeded() {
+        let directory = AppPaths.configs
+        guard !FileManager.default.fileExists(atPath: directory.path) else { return }
+        AppPaths.ensure(directory)
+        try? ConfigAuthoring.readme.data(using: .utf8)?
+            .write(to: directory.appendingPathComponent("README.md"))
+    }
+}

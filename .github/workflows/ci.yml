@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Build and test
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: swift --version
+
+      - name: Build
+        run: swift build -c release
+
+      - name: Test
+        run: swift test
+
+      # The App Store build compiles out shell actions, so it can break without the
+      # default build noticing. Both channels are built on every change.
+      - name: Build the App Store channel
+        env:
+          MCC_APP_STORE: "1"
+        run: swift build -c release --product MacCommandCenter
+
+      - name: Assemble both app bundles
+        run: |
+          scripts/build-app.sh --channel direct
+          scripts/build-app.sh --channel mas
+
+      - name: Check the App Store bundle excludes the CLI
+        run: |
+          scripts/build-app.sh --channel mas
+          if [ -e build/MacCommandCenter.app/Contents/MacOS/mcc ]; then
+            echo "The App Store bundle must not embed the CLI." >&2
+            exit 1
+          fi
+
+  format:
+    name: Format
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check formatting
+        run: swift format lint --recursive --strict Sources Tests
+
+  manifests:
+    name: Bundled skins and configs
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate JSON
+        run: |
+          status=0
+          while IFS= read -r file; do
+            if python3 -c "import json,sys;json.load(open(sys.argv[1]))" "$file"; then
+              echo "ok   $file"
+            else
+              echo "FAIL $file" >&2
+              status=1
+            fi
+          done < <(find Skins Configs -name '*.json')
+          exit $status

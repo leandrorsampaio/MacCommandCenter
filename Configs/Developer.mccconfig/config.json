@@ -1,0 +1,87 @@
+{
+  "format": 1,
+  "id": "developer",
+  "name": "Developer",
+  "author": "Mac Command Center",
+  "notes": "Keep Awake plus a few shell and open examples. Duplicate it and make it yours.",
+  "groups": [
+    {
+      "id": "power",
+      "title": "Power",
+      "commands": [
+        {
+          "id": "keep-awake",
+          "title": "Keep Awake",
+          "summary": "Normal sleep settings apply.",
+          "icon": "cup.and.saucer.fill",
+          "options": [
+            {
+              "id": "display-on",
+              "title": "Awake + Display On",
+              "subtitle": "Nothing sleeps, screen stays lit",
+              "icon": "sun.max.fill",
+              "action": { "type": "keepAwake", "mode": "systemAndDisplay" }
+            },
+            {
+              "id": "display-off",
+              "title": "Awake, Display Off",
+              "subtitle": "Mac runs on, screen may sleep",
+              "icon": "moon.zzz.fill",
+              "action": { "type": "keepAwake", "mode": "systemOnly" }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tools",
+      "title": "Tools",
+      "commands": [
+        {
+          "id": "shortcuts",
+          "title": "Open",
+          "summary": "One-press shortcuts.",
+          "icon": "arrow.up.forward.app",
+          "options": [
+            {
+              "id": "activity-monitor",
+              "title": "Activity Monitor",
+              "subtitle": "See what is busy",
+              "icon": "waveform.path.ecg",
+              "action": { "type": "openURL", "url": "file:///System/Applications/Utilities/Activity%20Monitor.app" }
+            },
+            {
+              "id": "downloads",
+              "title": "Downloads",
+              "subtitle": "Open the folder",
+              "icon": "folder",
+              "action": { "type": "openURL", "url": "file:///Users/Shared" }
+            }
+          ]
+        },
+        {
+          "id": "housekeeping",
+          "title": "Housekeeping",
+          "summary": "Shell examples. Each asks before it runs the first time.",
+          "icon": "terminal",
+          "options": [
+            {
+              "id": "disk-free",
+              "title": "Disk Free",
+              "subtitle": "Show space on the boot volume",
+              "icon": "internaldrive",
+              "action": { "type": "shell", "command": "df -h / | tail -1 | awk '{print $4\" free of \"$2}'", "timeout": 10 }
+            },
+            {
+              "id": "flush-dns",
+              "title": "Flush DNS",
+              "subtitle": "Clear the resolver cache",
+              "icon": "network",
+              "action": { "type": "shell", "command": "dscacheutil -flushcache && echo 'DNS cache flushed'", "timeout": 20 }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

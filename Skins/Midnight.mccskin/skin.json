@@ -1,0 +1,54 @@
+{
+  "format": 1,
+  "id": "midnight",
+  "name": "Midnight",
+  "author": "Mac Command Center",
+  "notes": "No bevels, no titlebar, no caps. Proof the format isn't stuck in 1997.",
+
+  "colors": {
+    "panel": "#16181C",
+    "panelHighlight": "#2A2E36",
+    "panelShadow": "#0C0D10",
+    "sectionLabel": "#6E7683",
+    "text": "#E6E8EC",
+    "textDim": "#8A909C",
+    "buttonFace": "#23262C",
+    "buttonFacePressed": "#2A3448",
+    "buttonText": "#E6E8EC",
+    "buttonTextActive": "#7FB2FF",
+    "buttonSubtext": "#7A8290",
+    "buttonSubtextActive": "#8FA8CC",
+    "readoutBackground": "#101216",
+    "readoutInk": "#7FB2FF",
+    "readoutInkDim": "#5E80B8",
+    "readoutInkIdle": "#3A4150",
+    "ledOn": "#7FB2FF",
+    "ledOff": "#2A2E36",
+    "visualizerOn": "#7FB2FF",
+    "visualizerOff": "#232A38",
+    "accent": "#7FB2FF"
+  },
+
+  "metrics": {
+    "bevel": 0,
+    "cornerRadius": 10,
+    "titlebarHeight": 0,
+    "padding": 14,
+    "spacing": 12,
+    "tileHeight": 132,
+    "ledSize": 7,
+    "glowRadius": 10,
+    "tracking": 0.2
+  },
+
+  "fonts": {
+    "display": { "family": "", "size": 11, "weight": "semibold" },
+    "readout": { "family": "", "size": 11, "monospaced": true },
+    "body":    { "family": "", "size": 10 }
+  },
+
+  "effects": {
+    "scanlines": false,
+    "uppercase": false
+  }
+}

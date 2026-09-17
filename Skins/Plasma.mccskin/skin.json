@@ -1,0 +1,39 @@
+{
+  "format": 1,
+  "id": "plasma",
+  "name": "Plasma",
+  "author": "Mac Command Center",
+  "notes": "Magenta glass, cyan lamps.",
+
+  "colors": {
+    "panel": "#1A0F1E",
+    "panelHighlight": "#4A2A52",
+    "panelShadow": "#0A050C",
+    "titlebarTop": "#3A1F42",
+    "titlebarBottom": "#22122A",
+    "titlebarText": "#E9BFE0",
+    "titlebarButtonFace": "#2A1530",
+    "sectionLabel": "#A06AA8",
+    "text": "#E9D4EC",
+    "textDim": "#9C7AA4",
+    "buttonFace": "#2C1934",
+    "buttonFacePressed": "#160B1A",
+    "buttonText": "#E9D4EC",
+    "buttonTextActive": "#5FF0FF",
+    "buttonSubtext": "#9C7AA4",
+    "buttonSubtextActive": "#49B4C4",
+    "readoutBackground": "#0D0510",
+    "readoutInk": "#FF5FD0",
+    "readoutInkDim": "#B23C92",
+    "readoutInkIdle": "#5C2049",
+    "ledOn": "#5FF0FF",
+    "ledOff": "#241029",
+    "visualizerOn": "#FF5FD0",
+    "visualizerOff": "#3A1436",
+    "accent": "#FF5FD0"
+  },
+
+  "metrics": {
+    "glowRadius": 9
+  }
+}

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Mandatory for the Mac App Store. -->
+    <key>com.apple.security.app-sandbox</key>
+    <true/>
+
+    <!-- Importing a skin or config through the open panel. Read-only: the app copies the
+         chosen file into its own container and never writes back to where it came from. -->
+    <key>com.apple.security.files.user-selected.read-only</key>
+    <true/>
+
+    <!-- The local control API, which is off unless the user turns it on in Settings.
+         Bound to 127.0.0.1 only. -->
+    <key>com.apple.security.network.server</key>
+    <true/>
+</dict>
+</plist>

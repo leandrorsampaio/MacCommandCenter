@@ -1,0 +1,20 @@
+{
+  "format": 1,
+  "id": "amber-vfd",
+  "name": "Amber VFD",
+  "author": "Mac Command Center",
+  "notes": "Same chassis, orange vacuum-fluorescent glass.",
+
+  "colors": {
+    "readoutBackground": "#12100A",
+    "readoutInk": "#FFB648",
+    "readoutInkDim": "#B37F2E",
+    "readoutInkIdle": "#5C4422",
+    "ledOn": "#FFAB3D",
+    "buttonTextActive": "#FFC061",
+    "buttonSubtextActive": "#C39755",
+    "visualizerOn": "#FFB648",
+    "visualizerOff": "#3A2A12",
+    "accent": "#FFB648"
+  }
+}
