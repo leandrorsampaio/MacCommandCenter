@@ -57,22 +57,26 @@ struct PanelSlotsView: View {
                     since: activeSince
                 )
             case .nixie:
-                TimelineView(.periodic(from: .now, by: 1)) { _ in
-                    SkinNixie(
-                        caption: "Uptime",
-                        value: uptime,
-                        secondCaption: "Mode",
-                        secondValue: modeLine,
-                        isActive: model.center.isAnythingActive
-                    )
+                SkinModule(caption: "Indicators", trailing: "SKALA") {
+                    TimelineView(.periodic(from: .now, by: 1)) { _ in
+                        SkinNixie(
+                            caption: "Uptime",
+                            value: uptime,
+                            secondCaption: "Mode",
+                            secondValue: modeLine,
+                            isActive: model.center.isAnythingActive
+                        )
+                    }
                 }
             }
 
         case .gauge(let source, let width):
             switch source {
             case .battery:
-                SkinGauge(value: model.powerStatus.charge ?? 1, caption: "Battery")
-                    .frame(width: width.map { CGFloat($0) })
+                SkinModule(caption: "Battery", trailing: "%") {
+                    SkinGauge(value: model.powerStatus.charge ?? 1, caption: "")
+                }
+                .frame(width: width.map { CGFloat($0) })
             }
 
         case .commands(let style, let columns):
@@ -88,11 +92,13 @@ struct PanelSlotsView: View {
             Spacer(minLength: 0)
 
         case .row(let children):
+            // Side-by-side modules share a height, so the row does not step.
             HStack(alignment: .top, spacing: skin.metrics.spacing) {
                 ForEach(Array(children.enumerated()), id: \.offset) { _, child in
-                    view(for: child)
+                    view(for: child).frame(maxHeight: .infinity)
                 }
             }
+            .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -117,9 +123,15 @@ struct PanelSlotsView: View {
             VStack(spacing: skin.metrics.spacing) {
                 ForEach(Array(stride(from: 0, to: entries.count, by: perRow)), id: \.self) {
                     start in
+                    let slice = Array(entries[start..<min(start + perRow, entries.count)])
                     HStack(spacing: skin.metrics.spacing) {
-                        ForEach(entries[start..<min(start + perRow, entries.count)]) { entry in
+                        ForEach(slice) { entry in
                             keyButton(entry)
+                        }
+                        // Hold the empty columns open: a lone key in the final row should
+                        // stay a key rather than stretching into a bar.
+                        ForEach(Array(0..<max(0, perRow - slice.count)), id: \.self) { _ in
+                            Color.clear.frame(maxWidth: .infinity)
                         }
                     }
                 }
@@ -165,7 +177,9 @@ struct PanelSlotsView: View {
                 if !entry.option.subtitle.isEmpty {
                     Text(entry.option.subtitle)
                         .font(skin.bodyFont)
-                        .opacity(0.8)
+                        .opacity(0.62)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.center)
                 }
             }
         }
@@ -240,11 +254,18 @@ struct PanelSlotsView: View {
 
     // MARK: - Derived content
 
+    /// Legends are short by nature. A bilingual title like "Режим сна · Sleep mode" is
+    /// a caption, not a legend, so only the part before the separator is used.
+    private func legend(_ title: String) -> String {
+        let head = title.split(separator: "·", maxSplits: 1).first.map(String.init) ?? title
+        return head.trimmingCharacters(in: .whitespaces)
+    }
+
     private var annunciatorCells: [SkinAnnunciator.Cell] {
         var cells = model.center.descriptors.map { descriptor in
             SkinAnnunciator.Cell(
                 id: descriptor.id.rawValue,
-                label: descriptor.title,
+                label: legend(descriptor.title),
                 isLit: model.center.state(for: descriptor.id).isActive
             )
         }
@@ -260,7 +281,7 @@ struct PanelSlotsView: View {
         var lamps = model.center.descriptors.map { descriptor in
             SkinLampRow.Lamp(
                 id: descriptor.id.rawValue,
-                label: descriptor.title,
+                label: legend(descriptor.title),
                 isLit: model.center.state(for: descriptor.id).isActive
             )
         }

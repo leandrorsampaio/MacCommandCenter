@@ -62,6 +62,70 @@ public struct SkinNameplate: View {
     }
 }
 
+/// A raised sub-panel with an engraved caption strip, the way instruments are bolted
+/// onto a console rather than floating on it.
+public struct SkinModule<Content: View>: View {
+
+    private let caption: String
+    private let trailing: String
+    private let content: Content
+
+    @Environment(\.skin) private var skin
+
+    public init(caption: String, trailing: String = "", @ViewBuilder content: () -> Content) {
+        self.caption = caption
+        self.trailing = trailing
+        self.content = content()
+    }
+
+    public var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text(skin.label(caption))
+                    .font(skin.displayFont)
+                    .tracking(skin.metrics.tracking * 1.3)
+                if !trailing.isEmpty {
+                    Spacer(minLength: 6)
+                    Text(trailing)
+                        .font(skin.readoutFont)
+                        .opacity(0.65)
+                }
+            }
+            .foregroundStyle(skin.colors.plateText.color)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(skin.colors.plate.color)
+            .overlay(alignment: .bottom) {
+                Rectangle().fill(skin.colors.panelShadow.opacity(0.7)).frame(height: 2)
+            }
+
+            content
+                .padding(9)
+                .frame(maxWidth: .infinity)
+        }
+        .background(
+            LinearGradient(
+                colors: [
+                    skin.colors.panelHighlight.color,
+                    skin.colors.panel.color,
+                    skin.colors.panelShadow.opacity(0.55),
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: skin.metrics.cornerRadius + 2, style: .continuous)
+                .strokeBorder(skin.colors.panelShadow.opacity(0.8), lineWidth: 2)
+        }
+        .clipShape(
+            RoundedRectangle(cornerRadius: skin.metrics.cornerRadius + 2, style: .continuous)
+        )
+        .shadow(color: .black.opacity(0.35), radius: 6, y: 3)
+    }
+}
+
 // MARK: - Annunciator
 
 /// One backlit legend cell per entry: dark until its condition is true.
@@ -227,17 +291,18 @@ public struct SkinGauge: View {
     private var angle: Double { -150 + value * 120 }
 
     public var body: some View {
-        VStack(spacing: 7) {
-            ZStack {
-                face
-                needle
-            }
-            .aspectRatio(200.0 / 118.0, contentMode: .fit)
+        VStack(spacing: 6) {
+            Color.clear
+                .aspectRatio(200.0 / 118.0, contentMode: .fit)
+                .overlay { face }
+                .overlay { needle }
 
-            Text(skin.label(caption))
-                .font(skin.bodyFont)
-                .tracking(skin.metrics.tracking)
-                .foregroundStyle(skin.colors.text.color)
+            if !caption.isEmpty {
+                Text(skin.label(caption))
+                    .font(skin.bodyFont)
+                    .tracking(skin.metrics.tracking)
+                    .foregroundStyle(skin.colors.text.color)
+            }
         }
     }
 
@@ -342,19 +407,20 @@ public struct SkinLampRow: View {
     public var body: some View {
         HStack(spacing: 12) {
             ForEach(lamps) { lamp in
-                HStack(spacing: 6) {
+                VStack(spacing: 5) {
                     dome(isLit: lamp.isLit)
                     Text(skin.label(lamp.label))
                         .font(skin.bodyFont)
-                        .tracking(skin.metrics.tracking * 0.6)
+                        .tracking(skin.metrics.tracking * 0.5)
                         .foregroundStyle(skin.colors.text.color)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.center)
+                        .minimumScaleFactor(0.6)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(maxWidth: .infinity)
             }
         }
-        .padding(.vertical, 9)
+        .padding(.vertical, 7)
         .padding(.horizontal, 10)
         .background(.black.opacity(0.10))
         .overlay(alignment: .top) { Rectangle().fill(.white.opacity(0.18)).frame(height: 1) }
@@ -424,18 +490,21 @@ public struct SkinKeyButtonStyle: ButtonStyle {
             .tracking(skin.metrics.tracking)
             .foregroundStyle(ink.color)
             .multilineTextAlignment(.center)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 11)
+            .frame(maxWidth: .infinity, minHeight: skin.metrics.keyHeight)
+            .padding(.vertical, 10)
             .padding(.horizontal, 8)
             .background(
                 LinearGradient(
-                    colors: [face.opacity(1), face.opacity(0.72)],
+                    colors: [face.opacity(1), face.opacity(0.55)],
                     startPoint: .top,
                     endPoint: .bottom
                 )
             )
             .overlay(alignment: .top) {
-                Rectangle().fill(.white.opacity(0.22)).frame(height: 1)
+                Rectangle().fill(.white.opacity(0.30)).frame(height: 1)
+            }
+            .overlay(alignment: .bottom) {
+                Rectangle().fill(.black.opacity(0.28)).frame(height: 1)
             }
             .overlay {
                 // A sunk cap darkens from its top edge, the way a recessed key does.

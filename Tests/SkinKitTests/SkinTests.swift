@@ -128,10 +128,22 @@ struct SkinAuthoringTests {
         #expect(rebuilt.metrics == Skin.classic.metrics)
     }
 
-    @Test func readmeDocumentsOnlyRealTokens() throws {
+    /// Every token an author can write must appear in the README they are handed. This
+    /// used to check colours alone, and a metric and a chrome flag duly went undocumented.
+    @Test func readmeDocumentsEveryToken() throws {
         let readme = SkinAuthoring.readme
+
         for key in SkinColors.keys {
             #expect(readme.contains(key), "README never mentions colour '\(key)'")
+        }
+        for key in SkinMetrics.keys {
+            #expect(readme.contains(key), "README never mentions metric '\(key)'")
+        }
+        for key in SkinEffects.keys {
+            #expect(readme.contains(key), "README never mentions effect '\(key)'")
+        }
+        for key in SkinChrome.keys {
+            #expect(readme.contains(key), "README never mentions chrome token '\(key)'")
         }
     }
 }

@@ -83,3 +83,37 @@ extension View {
         modifier(SkinSurfaceModifier(color: color, style: style))
     }
 }
+
+/// Fine vertical grain plus a top-down vignette: what stops a large flat fill reading as
+/// a rectangle rather than a sheet of painted metal.
+public struct SkinTexture: View {
+
+    @Environment(\.skin) private var skin
+
+    public init() {}
+
+    public var body: some View {
+        Canvas { context, size in
+            var x: CGFloat = 0
+            while x < size.width {
+                context.fill(
+                    Path(CGRect(x: x, y: 0, width: 1, height: size.height)),
+                    with: .color(.white.opacity(0.028))
+                )
+                context.fill(
+                    Path(CGRect(x: x + 2, y: 0, width: 1, height: size.height)),
+                    with: .color(.black.opacity(0.03))
+                )
+                x += 4
+            }
+        }
+        .overlay {
+            LinearGradient(
+                colors: [.white.opacity(0.10), .clear, .black.opacity(0.16)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        }
+        .allowsHitTesting(false)
+    }
+}

@@ -56,7 +56,16 @@ struct ControlPanelView: View {
             }
         }
         .frame(width: skin.metrics.width)
-        .skinSurface(skin.colors.panel, bevel: .raised)
+        // Chassis, then grain, then the content on top — grain is part of the metal, not
+        // a film over the instruments bolted to it.
+        .background {
+            ZStack {
+                skin.colors.panel.color
+                if skin.chrome.texture { SkinTexture() }
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: skin.metrics.cornerRadius, style: .continuous))
+        .bevel(.raised)
         .overlay { if skin.chrome.screws { SkinScrews() } }
         .skin(skin)
         .onPreferenceChange(ContentHeightKey.self) { height in

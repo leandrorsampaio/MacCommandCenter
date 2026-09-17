@@ -143,6 +143,7 @@ enum SkinAuthoring {
         | `glowRadius` | 7 | Bloom on lit elements |
         | `tracking` | 0.6 | Letter spacing on display type |
         | `keyRelief` | 5 | How far a relief key stands proud, and sinks when pressed |
+        | `keyHeight` | 62 | Minimum height of a relief key. A key is a block, not a row |
         | `indicatorDelay` | 0 | Seconds between a key latching and the lamps reporting it |
 
         `indicatorDelay` is worth a word. At `0` the panel responds instantly. Give it
@@ -186,6 +187,7 @@ enum SkinAuthoring {
         |---|---|---|
         | `screws` | false | Screws in the four corners |
         | `keyClick` | false | A click when a key is pressed |
+        | `texture` | false | Fine vertical grain over the chassis |
 
         ## Layout
 

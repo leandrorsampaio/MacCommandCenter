@@ -166,6 +166,8 @@ public struct SkinMetrics: Sendable, Equatable {
     public var tracking: Double
     /// How far a relief key stands proud, and how far it sinks when pressed.
     public var keyRelief: Double
+    /// Minimum height of a relief key. A key is a block, not a list row.
+    public var keyHeight: Double
     /// Delay between a key latching and the lamps reporting it, in seconds. A console
     /// with `0` responds instantly; a slower one feels like a relay closing elsewhere.
     public var indicatorDelay: Double
@@ -173,7 +175,7 @@ public struct SkinMetrics: Sendable, Equatable {
     public static let keys = [
         "width", "padding", "spacing", "bevel", "cornerRadius", "tileHeight",
         "titlebarHeight", "readoutPadding", "ledSize", "glowRadius", "tracking",
-        "keyRelief", "indicatorDelay",
+        "keyRelief", "keyHeight", "indicatorDelay",
     ]
 
     public subscript(key: String) -> Double? {
@@ -190,6 +192,7 @@ public struct SkinMetrics: Sendable, Equatable {
         case "glowRadius": return glowRadius
         case "tracking": return tracking
         case "keyRelief": return keyRelief
+        case "keyHeight": return keyHeight
         case "indicatorDelay": return indicatorDelay
         default: return nil
         }
@@ -210,6 +213,7 @@ public struct SkinMetrics: Sendable, Equatable {
             case "glowRadius": glowRadius = max(0, min(30, value))
             case "tracking": tracking = max(-2, min(6, value))
             case "keyRelief": keyRelief = max(0, min(14, value))
+            case "keyHeight": keyHeight = max(28, min(200, value))
             case "indicatorDelay": indicatorDelay = max(0, min(2, value))
             default: break
             }
@@ -277,14 +281,17 @@ public struct SkinChrome: Sendable, Equatable {
     public var screws: Bool
     /// A click when a key is pressed.
     public var keyClick: Bool
+    /// Fine vertical grain over the chassis, the way painted metal catches light.
+    public var texture: Bool
 
-    public static let keys = ["screws", "keyClick"]
+    public static let keys = ["screws", "keyClick", "texture"]
 
     mutating func apply(_ overrides: [String: Bool]) {
         for (key, value) in overrides {
             switch key {
             case "screws": screws = value
             case "keyClick": keyClick = value
+            case "texture": texture = value
             default: break
             }
         }

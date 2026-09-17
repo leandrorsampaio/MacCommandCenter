@@ -60,6 +60,7 @@ public extension Skin {
             glowRadius: 7,
             tracking: 0.6,
             keyRelief: 5,
+            keyHeight: 62,
             indicatorDelay: 0
         ),
         fonts: SkinFonts(
@@ -68,7 +69,7 @@ public extension Skin {
             body: SkinFontSpec(family: "Geneva", size: 9.5)
         ),
         effects: SkinEffects(glow: true, scanlines: true, visualizer: true, uppercase: true),
-        chrome: SkinChrome(screws: false, keyClick: false),
+        chrome: SkinChrome(screws: false, keyClick: false, texture: false),
         layout: SkinLayout.stack
     )
 }
