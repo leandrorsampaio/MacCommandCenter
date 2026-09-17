@@ -23,6 +23,14 @@ public struct CommandID: RawRepresentable, Hashable, Sendable, Codable,
     }
 }
 
+/// What a button *means*, which is a property of the command, not of the skin. A skin
+/// decides what "danger" looks like; the config decides which button is dangerous.
+public enum CommandRole: String, Codable, Sendable {
+    case normal
+    case caution
+    case danger
+}
+
 /// How a command behaves, which is also how a future physical button should behave.
 public enum CommandKind: String, Codable, Sendable {
     /// Fire and forget (no lasting state).
@@ -44,6 +52,8 @@ public struct CommandOption: Identifiable, Hashable, Codable, Sendable {
     /// doing something once. Only latching options may be restored across a registry
     /// swap — re-firing a one-shot action would run it with nobody asking.
     public let latches: Bool
+    /// What this button means. A skin turns it into a colour.
+    public let role: CommandRole
 
     public init(
         id: String,
@@ -51,7 +61,8 @@ public struct CommandOption: Identifiable, Hashable, Codable, Sendable {
         subtitle: String = "",
         systemImage: String,
         isEnabled: Bool = true,
-        latches: Bool = false
+        latches: Bool = false,
+        role: CommandRole = .normal
     ) {
         self.id = id
         self.title = title
@@ -59,6 +70,7 @@ public struct CommandOption: Identifiable, Hashable, Codable, Sendable {
         self.systemImage = systemImage
         self.isEnabled = isEnabled
         self.latches = latches
+        self.role = role
     }
 
     public init(from decoder: Decoder) throws {
@@ -69,6 +81,7 @@ public struct CommandOption: Identifiable, Hashable, Codable, Sendable {
         systemImage = try container.decodeIfPresent(String.self, forKey: .systemImage) ?? "circle"
         isEnabled = try container.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? true
         latches = try container.decodeIfPresent(Bool.self, forKey: .latches) ?? false
+        role = try container.decodeIfPresent(CommandRole.self, forKey: .role) ?? .normal
     }
 }
 

@@ -7,8 +7,8 @@
   "layout": [
     {
       "slot": "nameplate",
-      "text": "\u041f\u0443\u043b\u044c\u0442 \u0443\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0438\u044f",
-      "subtitle": "Control panel \u00b7 \u0411\u0429\u0423-1"
+      "text": "Пульт управления",
+      "subtitle": "Control panel · БЩУ-1"
     },
     {
       "slot": "annunciator"
@@ -74,7 +74,9 @@
     "keyWall": "#0E0E0B",
     "gaugeFace": "#E4DDC6",
     "gaugeInk": "#2A2A22",
-    "needle": "#C8251B"
+    "needle": "#C8251B",
+    "keyDanger": "#8E2116",
+    "keyCaution": "#8A6A18"
   },
   "metrics": {
     "width": 480,
@@ -88,7 +90,7 @@
     "glowRadius": 9,
     "tracking": 1.2,
     "keyRelief": 7,
-    "indicatorDelay": 0.2,
+    "indicatorDelay": 0.3,
     "keyHeight": 54
   },
   "fonts": {

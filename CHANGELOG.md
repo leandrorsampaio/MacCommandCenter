@@ -94,6 +94,13 @@ Following two external reviews (`review_claude_fable_5_1.md`, `review_gemini_3_8
 
 ### Added
 
+- **Button roles.** A config can mark an option `danger` or `caution`; the skin decides
+  what that looks like via `keyDanger` and `keyCaution`. Meaning stays in the config,
+  colour stays in the skin — so a skin is free to render danger as green phosphor if that
+  is what it is. АЗ-5 is red because it is an emergency key, not because a skin said so.
+
+### Added
+
 - **A skin now owns the panel's layout, not just its colours.** It declares rows from a
   fixed vocabulary of slots — nameplate, annunciator, readout, gauge, commands, lamps,
   controls, spacer, row — and picks how commands draw. The app renders every part, so a

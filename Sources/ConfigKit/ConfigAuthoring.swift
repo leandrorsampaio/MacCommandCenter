@@ -58,6 +58,14 @@ enum ConfigAuthoring {
 
         `icon` is any SF Symbol name. Browse them in Apple's SF Symbols app.
 
+        An option may also carry a **role**: `"role": "danger"` or `"caution"`. That is a
+        statement about what the button *means*, not what colour it is — the skin decides how
+        danger looks. Leave it out for an ordinary button.
+
+
+        An option may also carry a **role**: `"role": "danger"` or `"caution"`.
+        That is a statement about what the button *means*, not what colour it is — the
+        skin decides how danger looks. Leave it out for an ordinary button.
         ## Actions
 
         ### `keepAwake`

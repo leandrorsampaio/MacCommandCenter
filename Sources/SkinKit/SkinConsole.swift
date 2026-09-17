@@ -460,16 +460,24 @@ public struct SkinLampRow: View {
 
 /// A latching pushbutton. The cap never changes colour — it is a physical object — and it
 /// stays down once latched, over-travelling slightly before it releases.
+/// How much emphasis a key carries. This is a *visual* vocabulary: SkinKit does not know
+/// what a command is, so the app maps a command's meaning onto one of these.
+public enum SkinKeyRole: Sendable {
+    case normal
+    case caution
+    case danger
+}
+
 public struct SkinKeyButtonStyle: ButtonStyle {
 
     private let isLatched: Bool
-    private let tint: SkinRGBA?
+    private let role: SkinKeyRole
 
     @Environment(\.skin) private var skin
 
-    public init(isLatched: Bool = false, tint: SkinRGBA? = nil) {
+    public init(isLatched: Bool = false, role: SkinKeyRole = .normal) {
         self.isLatched = isLatched
-        self.tint = tint
+        self.role = role
     }
 
     public func makeBody(configuration: Configuration) -> some View {
@@ -481,9 +489,16 @@ public struct SkinKeyButtonStyle: ButtonStyle {
             case (false, true): relief * 0.8
             case (false, false): 0
             }
+        let standing = max(0, relief - travel)
 
-        let face = tint ?? skin.colors.buttonFace
-        let ink = tint == nil ? skin.colors.buttonText : skin.colors.buttonTextActive
+        let face: SkinRGBA =
+            switch role {
+            case .normal: skin.colors.buttonFace
+            case .caution: skin.colors.keyCaution
+            case .danger: skin.colors.keyDanger
+            }
+        let ink = role == .normal ? skin.colors.buttonText : skin.colors.buttonTextActive
+        let shape = RoundedRectangle(cornerRadius: skin.metrics.cornerRadius, style: .continuous)
 
         return configuration.label
             .font(skin.displayFont)
@@ -503,8 +518,13 @@ public struct SkinKeyButtonStyle: ButtonStyle {
             .overlay(alignment: .top) {
                 Rectangle().fill(.white.opacity(0.30)).frame(height: 1)
             }
-            .overlay(alignment: .bottom) {
-                Rectangle().fill(.black.opacity(0.28)).frame(height: 1)
+            // The cap is not flat: it shades into its own bottom edge.
+            .overlay {
+                LinearGradient(
+                    colors: [.clear, .black.opacity(0.34)],
+                    startPoint: .center,
+                    endPoint: .bottom
+                )
             }
             .overlay {
                 // A sunk cap darkens from its top edge, the way a recessed key does.
@@ -514,17 +534,19 @@ public struct SkinKeyButtonStyle: ButtonStyle {
                     endPoint: .center
                 )
             }
-            .clipShape(
-                RoundedRectangle(cornerRadius: skin.metrics.cornerRadius, style: .continuous)
-            )
-            // The wall the cap stands on: same size as the cap, pushed down by whatever
-            // relief is left, so it shortens as the key sinks.
+            .clipShape(shape)
+            // The wall the cap stands on, shortening as the key sinks.
+            .background(shape.fill(skin.colors.keyWall.color).offset(y: standing))
+            // The collar: a darker lip a little wider than the wall, which is what stops
+            // the key looking printed on the panel.
             .background(
-                RoundedRectangle(cornerRadius: skin.metrics.cornerRadius, style: .continuous)
-                    .fill(skin.colors.keyWall.color)
-                    .offset(y: max(0, relief - travel))
+                shape
+                    .fill(skin.colors.keyWall.opacity(0.85))
+                    .padding(-2)
+                    .offset(y: standing + 1)
             )
             .offset(y: travel)
+            .shadow(color: .black.opacity(0.45), radius: 5, y: 3)
             .padding(.bottom, relief)
             .contentShape(Rectangle())
             .animation(.easeOut(duration: 0.07), value: travel)

@@ -159,6 +159,12 @@ struct ControlServerTests {
         try await waitUntilRunning(first)
         first.stop()
 
+        // Cancellation is asynchronous, so rebinding the same port immediately races it.
+        for _ in 0..<50 where first.isRunning {
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        #expect(!first.isRunning)
+
         let (_, second) = makeServer(port: port)
         second.start()
         defer { second.stop() }

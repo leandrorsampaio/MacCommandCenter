@@ -110,13 +110,22 @@ public struct ConfigOption: Sendable, Equatable, Identifiable {
     public var subtitle: String
     public var icon: String
     public var action: ActionSpec
+    /// What the button means. A skin turns it into a colour; the default is neutral.
+    public var role: CommandRole
 
-    public init(id: String, title: String, subtitle: String = "", icon: String, action: ActionSpec)
-    {
+    public init(
+        id: String,
+        title: String,
+        subtitle: String = "",
+        icon: String,
+        action: ActionSpec,
+        role: CommandRole = .normal
+    ) {
         self.id = id
         self.title = title
         self.subtitle = subtitle
         self.icon = icon
         self.action = action
+        self.role = role
     }
 }

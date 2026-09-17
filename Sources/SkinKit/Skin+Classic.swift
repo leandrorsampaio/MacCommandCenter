@@ -43,6 +43,8 @@ public extension Skin {
             plate: SkinRGBA(hex: "#45454E")!,
             plateText: SkinRGBA(hex: "#D2D2DC")!,
             keyWall: SkinRGBA(hex: "#17171B")!,
+            keyCaution: SkinRGBA(hex: "#7A6A2A")!,
+            keyDanger: SkinRGBA(hex: "#7A2418")!,
             gaugeFace: SkinRGBA(hex: "#07120C")!,
             gaugeInk: SkinRGBA(hex: "#4DFF9B")!,
             needle: SkinRGBA(hex: "#4DFF9B")!

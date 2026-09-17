@@ -1,3 +1,4 @@
+import CommandCore
 import Foundation
 
 /// JSON shape of a `config.json`, and the translation to and from the runtime model.
@@ -37,6 +38,7 @@ enum ConfigCodec {
         var title: String
         var subtitle: String?
         var icon: String?
+        var role: String?
         var action: Action
     }
 
@@ -79,7 +81,8 @@ enum ConfigCodec {
                     title: option.title,
                     subtitle: option.subtitle ?? "",
                     icon: option.icon ?? "circle",
-                    action: decodeAction(option.action)
+                    action: decodeAction(option.action),
+                    role: CommandRole(rawValue: option.role ?? "") ?? .normal
                 )
             }
         )
@@ -145,6 +148,7 @@ enum ConfigCodec {
                                     title: option.title,
                                     subtitle: option.subtitle.isEmpty ? nil : option.subtitle,
                                     icon: option.icon,
+                                    role: option.role == .normal ? nil : option.role.rawValue,
                                     action: encodeAction(option.action)
                                 )
                             }

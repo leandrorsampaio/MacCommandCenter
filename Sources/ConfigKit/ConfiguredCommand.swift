@@ -50,7 +50,8 @@ public final class ConfiguredCommand: CommandHandling {
                         subtitle: reason,
                         systemImage: option.icon,
                         isEnabled: false,
-                        latches: option.action.latches
+                        latches: option.action.latches,
+                        role: option.role
                     )
                 }
                 return CommandOption(
@@ -58,7 +59,8 @@ public final class ConfiguredCommand: CommandHandling {
                     title: option.title,
                     subtitle: option.subtitle,
                     systemImage: option.icon,
-                    latches: option.action.latches
+                    latches: option.action.latches,
+                    role: option.role
                 )
             }
         )

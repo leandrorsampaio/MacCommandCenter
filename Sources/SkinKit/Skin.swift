@@ -45,6 +45,9 @@ public struct SkinColors: Sendable, Equatable {
     public var plateText: SkinRGBA
     /// The side wall a relief key stands on.
     public var keyWall: SkinRGBA
+    /// Cap colours for the two non-neutral roles a config can give a button.
+    public var keyCaution: SkinRGBA
+    public var keyDanger: SkinRGBA
     /// The face, printing and needle of an analogue gauge.
     public var gaugeFace: SkinRGBA
     public var gaugeInk: SkinRGBA
@@ -60,7 +63,8 @@ public struct SkinColors: Sendable, Equatable {
         "readoutBackground", "readoutInk", "readoutInkDim", "readoutInkIdle",
         "ledOn", "ledOff", "visualizerOn", "visualizerOff",
         "accent",
-        "plate", "plateText", "keyWall", "gaugeFace", "gaugeInk", "needle",
+        "plate", "plateText", "keyWall", "keyCaution", "keyDanger",
+        "gaugeFace", "gaugeInk", "needle",
     ]
 
     public subscript(key: String) -> SkinRGBA? {
@@ -94,6 +98,8 @@ public struct SkinColors: Sendable, Equatable {
             case "plate": return plate
             case "plateText": return plateText
             case "keyWall": return keyWall
+            case "keyCaution": return keyCaution
+            case "keyDanger": return keyDanger
             case "gaugeFace": return gaugeFace
             case "gaugeInk": return gaugeInk
             case "needle": return needle
@@ -131,6 +137,8 @@ public struct SkinColors: Sendable, Equatable {
             case "plate": plate = newValue
             case "plateText": plateText = newValue
             case "keyWall": keyWall = newValue
+            case "keyCaution": keyCaution = newValue
+            case "keyDanger": keyDanger = newValue
             case "gaugeFace": gaugeFace = newValue
             case "gaugeInk": gaugeInk = newValue
             case "needle": needle = newValue

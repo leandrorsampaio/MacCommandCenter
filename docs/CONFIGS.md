@@ -53,6 +53,10 @@ options and they behave as a pair, like the two Keep Awake modes.
 
 `icon` is any SF Symbol name — browse them in Apple's SF Symbols app.
 
+An option may also carry a **role**: `"role": "danger"` or `"caution"`. That is a
+statement about what the button *means*, not what colour it is — the skin decides how
+danger looks. Leave it out for an ordinary button.
+
 ## Actions
 
 ### `keepAwake`

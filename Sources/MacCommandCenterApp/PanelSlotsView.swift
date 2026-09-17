@@ -183,12 +183,22 @@ struct PanelSlotsView: View {
                 }
             }
         }
-        .buttonStyle(SkinKeyButtonStyle(isLatched: isLatched))
+        .buttonStyle(SkinKeyButtonStyle(isLatched: isLatched, role: keyRole(entry.option.role)))
         .disabled(!entry.option.isEnabled)
         .opacity(entry.option.isEnabled ? 1 : 0.5)
         .keyboardShortcut(digit(entry.shortcut), modifiers: [])
         .accessibilityAddTraits(isLatched ? [.isSelected] : [])
         .help(entry.option.subtitle)
+    }
+
+    /// A command's meaning, expressed as visual emphasis. The two vocabularies are
+    /// deliberately separate: SkinKit has no idea what a command is.
+    private func keyRole(_ role: CommandRole) -> SkinKeyRole {
+        switch role {
+        case .normal: .normal
+        case .caution: .caution
+        case .danger: .danger
+        }
     }
 
     /// The key falls the moment it is struck; the command follows after the skin's delay.

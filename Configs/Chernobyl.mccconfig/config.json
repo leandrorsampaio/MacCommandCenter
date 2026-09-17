@@ -20,14 +20,20 @@
               "title": "Экран вкл",
               "subtitle": "Screen on · nothing sleeps",
               "icon": "sun.max.fill",
-              "action": { "type": "keepAwake", "mode": "systemAndDisplay" }
+              "action": {
+                "type": "keepAwake",
+                "mode": "systemAndDisplay"
+              }
             },
             {
               "id": "display-off",
               "title": "Экран выкл",
               "subtitle": "Screen off · Mac stays awake",
               "icon": "moon.zzz.fill",
-              "action": { "type": "keepAwake", "mode": "systemOnly" }
+              "action": {
+                "type": "keepAwake",
+                "mode": "systemOnly"
+              }
             }
           ]
         }
@@ -48,7 +54,12 @@
               "title": "АЗ-5 · Сброс",
               "subtitle": "Scram — blank the display now",
               "icon": "bolt.slash.fill",
-              "action": { "type": "shell", "command": "pmset displaysleepnow", "timeout": 10 }
+              "action": {
+                "type": "shell",
+                "command": "pmset displaysleepnow",
+                "timeout": 10
+              },
+              "role": "danger"
             }
           ]
         }

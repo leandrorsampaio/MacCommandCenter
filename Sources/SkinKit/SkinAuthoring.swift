@@ -120,6 +120,8 @@ enum SkinAuthoring {
         | `plate` | Engraved plates: the nameplate and module captions |
         | `plateText` | Printing on those plates |
         | `keyWall` | The side wall a relief key stands on |
+        | `keyCaution` | Cap of a key the config marked `caution` |
+        | `keyDanger` | Cap of a key the config marked `danger` |
         | `gaugeFace` | The dial face of a gauge |
         | `gaugeInk` | Its ticks and printing |
         | `needle` | Its needle |
