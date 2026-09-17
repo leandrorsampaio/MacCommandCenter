@@ -1,31 +1,31 @@
 {
   "format": 1,
   "id": "reactor",
-  "name": "Пульт",
+  "name": "Пульт · Control Panel",
   "author": "Mac Command Center",
-  "notes": "Cyrillic labels for the Reactor Control skin. A config supplies the words; the skin supplies the look.",
+  "notes": "Cyrillic labels with English underneath. A config supplies the words; the skin supplies the look.",
   "groups": [
     {
       "id": "power",
-      "title": "Питание",
+      "title": "Питание · Power",
       "commands": [
         {
           "id": "keep-awake",
-          "title": "Режим сна",
-          "summary": "Обычный режим сна.",
+          "title": "Режим сна · Sleep mode",
+          "summary": "Обычный режим сна · Normal sleep settings apply",
           "icon": "cup.and.saucer.fill",
           "options": [
             {
               "id": "display-on",
               "title": "Экран вкл",
-              "subtitle": "Ничего не спит",
+              "subtitle": "Screen on · nothing sleeps",
               "icon": "sun.max.fill",
               "action": { "type": "keepAwake", "mode": "systemAndDisplay" }
             },
             {
               "id": "display-off",
               "title": "Экран выкл",
-              "subtitle": "Экран может погаснуть",
+              "subtitle": "Screen off · Mac stays awake",
               "icon": "moon.zzz.fill",
               "action": { "type": "keepAwake", "mode": "systemOnly" }
             }
@@ -35,18 +35,18 @@
     },
     {
       "id": "control",
-      "title": "Контроль",
+      "title": "Аварийная защита · Emergency protection",
       "commands": [
         {
           "id": "az5",
           "title": "АЗ-5",
-          "summary": "Аварийное гашение экрана.",
+          "summary": "Аварийное гашение экрана · Emergency display shutdown",
           "icon": "exclamationmark.octagon.fill",
           "options": [
             {
               "id": "scram",
-              "title": "Сброс",
-              "subtitle": "Погасить экран сейчас",
+              "title": "АЗ-5 · Сброс",
+              "subtitle": "Scram — blank the display now",
               "icon": "bolt.slash.fill",
               "action": { "type": "shell", "command": "pmset displaysleepnow", "timeout": 10 }
             }
