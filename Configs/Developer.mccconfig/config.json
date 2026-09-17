@@ -51,9 +51,9 @@
               "action": { "type": "openURL", "url": "file:///System/Applications/Utilities/Activity%20Monitor.app" }
             },
             {
-              "id": "downloads",
-              "title": "Downloads",
-              "subtitle": "Open the folder",
+              "id": "shared",
+              "title": "Shared Folder",
+              "subtitle": "Open /Users/Shared",
               "icon": "folder",
               "action": { "type": "openURL", "url": "file:///Users/Shared" }
             }

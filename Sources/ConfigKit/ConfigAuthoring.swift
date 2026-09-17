@@ -76,6 +76,11 @@ enum ConfigAuthoring {
 
         Hands the URL to whatever normally opens it. Fires once, does not latch.
 
+        `http`, `https` and `mailto` open straight away. Every other scheme asks once,
+        showing the full URL: `file:` can launch an app or a script and `shortcuts:` can
+        run any automation you own, so a config from someone else must not be able to
+        start one unseen. Approvals are revocable in Settings > Advanced.
+
         ### `shell`
 
             { "type": "shell", "command": "make deploy", "timeout": 120 }

@@ -67,8 +67,9 @@ they do: keep awake, open a URL, or run a shell command. Build one in **Settings
 or edit the JSON. → **[docs/CONFIGS.md](docs/CONFIGS.md)**
 
 Shell buttons are **inert until you approve the exact command**, and editing a command
-asks again. Configs are meant to be shared, and without that "try my config" would mean
-"run my code."
+asks again. A URL that can *start* something — `file:`, `shortcuts:`, any app's own scheme
+— asks too; `http`, `https` and `mailto` do not. Configs are meant to be shared, and
+without that "try my config" would mean "run my code."
 
 ## Two builds
 

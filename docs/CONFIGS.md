@@ -75,6 +75,15 @@ again. Works on battery and on mains.
 
 Hands the URL to whatever normally opens it. Fires once, does not latch.
 
+**Why a URL sometimes asks first.** `http`, `https` and `mailto` open straight away — they
+can do no more than a link in a browser or a mail client. Every other scheme asks once,
+showing the full URL, with Open Once / Always Allow / Cancel.
+
+That covers `file:` (which can launch an app or a script), `shortcuts:` (which can run any
+automation you own) and any app's own scheme. Without it, opening someone else's config
+and clicking one button would be enough to start something you never saw. Approvals are
+listed and revocable in **Settings > Advanced**, alongside shell commands.
+
 ### `shell`
 
 ```json
