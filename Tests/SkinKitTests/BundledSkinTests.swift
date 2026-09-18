@@ -22,7 +22,8 @@ struct BundledSkinTests {
             at: skinsDirectory,
             includingPropertiesForKeys: nil
         )
-        let manifests = contents
+        let manifests =
+            contents
             .map { $0.appendingPathComponent("skin.json") }
             .filter { FileManager.default.fileExists(atPath: $0.path) }
 
@@ -42,7 +43,8 @@ struct BundledSkinTests {
     /// Reactor Control is the worked example for layouts; if its layout stops parsing the
     /// app silently renders the default stack instead.
     @Test func reactorControlDeclaresAConsoleLayout() throws {
-        let manifest = skinsDirectory
+        let manifest =
+            skinsDirectory
             .appendingPathComponent("Chernobyl.mccskin/skin.json")
         let data = try Data(contentsOf: manifest)
         let raw = try #require(
