@@ -125,6 +125,8 @@ enum SkinAuthoring {
         | `gaugeFace` | The dial face of a gauge |
         | `gaugeInk` | Its ticks and printing |
         | `needle` | Its needle |
+        | `tape` | A strip of tape, for a lamp row labelled by hand |
+        | `tapeInk` | The marker on it |
 
         ## Metrics
 
@@ -156,8 +158,9 @@ enum SkinAuthoring {
 
         ## Fonts
 
-        Three roles: `display` (labels and button titles), `readout` (the LCD) and `body`
-        (descriptions). Each takes `family`, `size`, `weight` and `monospaced`.
+        Four roles: `display` (labels and button titles), `readout` (the LCD), `body`
+        (descriptions) and `hand` (anything written rather than printed — a taped-on lamp
+        label). Each takes `family`, `size`, `weight` and `monospaced`.
 
         `family` takes one name or a stack, and the first one installed wins:
 
@@ -222,7 +225,7 @@ enum SkinAuthoring {
                 { "slot": "readout", "style": "nixie" }
               ]},
               { "slot": "commands", "style": "key", "columns": 2 },
-              { "slot": "lamps" },
+              { "slot": "lamps", "style": "tape" },
               { "slot": "spacer" },
               { "slot": "controls" }
             ]
@@ -234,7 +237,7 @@ enum SkinAuthoring {
         | `readout` | `style`: `lcd` (the original strip) or `nixie` (a large counter) |
         | `gauge` | `source`: `battery`. Optional `width` |
         | `commands` | The buttons. `style`: `tile` or `key`. `columns`: 0 means one row |
-        | `lamps` | An indicator lamp per command, plus battery |
+        | `lamps` | An indicator lamp per command, plus battery. `style`: `plain` or `tape` |
         | `controls` | Float-on-top and close, as panel keys. Takes `onTop`, `onTopNote`, `close`, `closeNote`; English by default |
         | `spacer` | Pushes everything after it to the bottom |
         | `row` | Lays its `children` out side by side |
@@ -242,6 +245,11 @@ enum SkinAuthoring {
         `key` is a latching pushbutton: it stays down until pressed again, and its cap
         never changes colour, because a physical key is the colour it is. State shows on
         the lamps and the annunciator.
+
+        `lamps` with `"style": "tape"` writes each caption on a torn strip of tape in the
+        `hand` font instead of printing it under the lamp — for a panel that looks
+        relabelled rather than manufactured. The tear and the angle are derived from the
+        command's id, so a given lamp looks the same every time.
 
         A slot this version does not recognise is skipped rather than failing the skin, so
         a layout written for a later release still renders what it can.

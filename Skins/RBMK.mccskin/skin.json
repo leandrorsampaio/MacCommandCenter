@@ -33,7 +33,8 @@
       "columns": 2
     },
     {
-      "slot": "lamps"
+      "slot": "lamps",
+      "style": "tape"
     },
     {
       "slot": "spacer"
@@ -81,7 +82,9 @@
     "gaugeInk": "#2A2A22",
     "needle": "#C8251B",
     "keyDanger": "#8E2116",
-    "keyCaution": "#8A6A18"
+    "keyCaution": "#8A6A18",
+    "tape": "#D8CDAE",
+    "tapeInk": "#1E1B14"
   },
   "metrics": {
     "width": 480,
@@ -121,6 +124,15 @@
         "PT Sans"
       ],
       "size": 10
+    },
+    "hand": {
+      "family": [
+        "Bradley Hand",
+        "Noteworthy",
+        "Marker Felt"
+      ],
+      "size": 11,
+      "weight": "semibold"
     }
   },
   "effects": {

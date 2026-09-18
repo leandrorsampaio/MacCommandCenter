@@ -20,6 +20,13 @@ All notable changes to this project are documented here. The format follows
   being hardcoded in an otherwise language-neutral app.
 - **`legendScale`**, a metric that sizes every key face, lamp caption and annunciator cell
   together. The RBMK panel sets `1.25`.
+- **Lamp captions can be written on tape**: `"slot": "lamps", "style": "tape"` puts each
+  name on a torn strip in the new `hand` font, at an angle, instead of printing it under
+  the lamp. New colour tokens `tape` and `tapeInk`. The tear and the angle come from the
+  command's id, so a lamp looks the same on every redraw — deriving them from a random
+  number made the row shimmer.
+- Two modules side by side end level: a module's content now fills the height the row
+  settles on, so the battery gauge no longer stopped short of the counter beside it.
 - Keys in a row share a height, and the lamps sit directly on the chassis — the recessed
   strip behind them was the only part of the panel with a background of its own.
 

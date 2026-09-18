@@ -47,7 +47,9 @@ public extension Skin {
             keyDanger: SkinRGBA(hex: "#7A2418")!,
             gaugeFace: SkinRGBA(hex: "#07120C")!,
             gaugeInk: SkinRGBA(hex: "#4DFF9B")!,
-            needle: SkinRGBA(hex: "#4DFF9B")!
+            needle: SkinRGBA(hex: "#4DFF9B")!,
+            tape: SkinRGBA(hex: "#E4DAC2")!,
+            tapeInk: SkinRGBA(hex: "#2A2620")!
         ),
         metrics: SkinMetrics(
             width: 340,
@@ -69,7 +71,8 @@ public extension Skin {
         fonts: SkinFonts(
             display: SkinFontSpec(family: "Geneva", size: 10, weight: .semibold),
             readout: SkinFontSpec(family: "Monaco", size: 11, monospaced: true),
-            body: SkinFontSpec(family: "Geneva", size: 9.5)
+            body: SkinFontSpec(family: "Geneva", size: 9.5),
+            hand: SkinFontSpec(family: "Bradley Hand", size: 11, weight: .semibold)
         ),
         effects: SkinEffects(
             glow: true, scanlines: true, visualizer: true, uppercase: true, flicker: false),

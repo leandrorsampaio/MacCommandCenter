@@ -25,6 +25,8 @@ public extension Skin {
     var bodyFont: Font { fonts.body.font }
 
     /// Legend type: key faces, lamp captions and annunciator cells.
+    var handFont: Font { fonts.hand.scaled(by: metrics.legendScale).font }
+
     var legendTitleFont: Font { fonts.display.scaled(by: metrics.legendScale).font }
     var legendNoteFont: Font { fonts.body.scaled(by: metrics.legendScale).font }
 }

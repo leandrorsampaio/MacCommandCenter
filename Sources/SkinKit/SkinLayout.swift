@@ -31,7 +31,7 @@ public indirect enum SkinSlot: Sendable, Equatable {
     /// The command buttons. `columns` of 0 means "one row, share the width".
     case commands(style: CommandStyle, columns: Int)
     /// A row of indicator lamps mirroring command state.
-    case lamps
+    case lamps(style: LampStyle)
     /// Float-on-top and close, as panel controls rather than titlebar boxes. Each takes
     /// an optional label and sub-label so a skin can word them in its own language.
     case controls(labels: ControlLabels)
@@ -70,6 +70,14 @@ public enum GaugeSource: String, Sendable, Codable {
     case battery
 }
 
+public enum LampStyle: String, Sendable, Codable {
+    /// A printed caption under each lamp.
+    case plain
+    /// A strip of tape with the name written on it, the way a panel gets relabelled
+    /// after the drawings stop matching the wiring.
+    case tape
+}
+
 public enum CommandStyle: String, Sendable, Codable {
     /// Icon, title and subtitle in a tall card. The original.
     case tile
@@ -105,7 +113,8 @@ extension SkinSlot {
                 subtitle: entry["subtitle"] as? String
             )
         case "annunciator": self = .annunciator
-        case "lamps": self = .lamps
+        case "lamps":
+            self = .lamps(style: LampStyle(rawValue: entry["style"] as? String ?? "") ?? .plain)
         case "controls":
             self = .controls(
                 labels: ControlLabels(

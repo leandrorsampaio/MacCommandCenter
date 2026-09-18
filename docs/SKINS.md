@@ -63,6 +63,8 @@ Hex, with or without `#`. `#RGB`, `#RGBA`, `#RRGGBB` and `#RRGGBBAA` all work.
 | `gaugeFace` | The dial face of a gauge |
 | `gaugeInk` | Its ticks and printing |
 | `needle` | Its needle |
+| `tape` | A strip of tape, for a lamp row labelled by hand |
+| `tapeInk` | The marker on it |
 
 ## Metrics
 
@@ -93,8 +95,9 @@ somewhere else in the building had to close first.
 
 ## Fonts
 
-Three roles: `display` (labels and button titles), `readout` (the LCD) and `body`
-(descriptions). Each takes `family`, `size`, `weight` and `monospaced`.
+Four roles: `display` (labels and button titles), `readout` (the LCD), `body`
+(descriptions) and `hand` (anything written rather than printed — a taped-on lamp label).
+Each takes `family`, `size`, `weight` and `monospaced`.
 
 `family` takes one name or a stack, and the first one installed wins:
 
@@ -176,7 +179,7 @@ panel itself:
 | `readout` | `style`: `lcd` (the original strip) or `nixie` (a large counter) |
 | `gauge` | `source`: `battery`. Optional `width` |
 | `commands` | The buttons. `style`: `tile` or `key`. `columns`: `0` means one row |
-| `lamps` | An indicator lamp per command, plus battery |
+| `lamps` | An indicator lamp per command, plus battery. `style`: `plain` or `tape` |
 | `controls` | Float-on-top and close, as panel keys. Takes `onTop`, `onTopNote`, `close`, `closeNote`; English by default |
 | `spacer` | Pushes everything after it to the bottom |
 | `row` | Lays its `children` out side by side |
@@ -185,13 +188,18 @@ panel itself:
 changes colour, because a physical key is the colour it is. State shows on the lamps and
 the annunciator, not on the cap.
 
+`lamps` with `"style": "tape"` writes each caption on a torn strip of tape in the `hand`
+font instead of printing it under the lamp — for a panel that looks relabelled rather than
+manufactured. The tear and the angle come from the command's id, so a given lamp looks the
+same on every redraw.
+
 **The app draws every one of these.** A skin chooses from the vocabulary and says what
 goes where — it never supplies code, markup or images that get executed. A slot this
 version does not recognise is skipped rather than failing the skin, so a layout written
 for a later release still renders what it can.
 
-**RBMK Mac Control Panel** is the worked example: square panel, annunciator strip, needle gauge,
-amber counter, latching keys and a control row. Read its `skin.json` next to this file.
+**RBMK Mac Control Panel** is the worked example: square panel, annunciator strip, needle
+gauge, amber counter, latching keys, taped lamp labels and a control row. Read its `skin.json` next to this file.
 
 ## Sharing
 

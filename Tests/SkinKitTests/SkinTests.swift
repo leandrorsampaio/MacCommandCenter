@@ -194,7 +194,7 @@ struct SkinLayoutTests {
                 ]}
                 """))
 
-        #expect(parsed.rows == [.lamps])
+        #expect(parsed.rows == [.lamps(style: .plain)])
     }
 
     @Test func unknownStylesFallBackRatherThanFailing() throws {
@@ -202,6 +202,25 @@ struct SkinLayoutTests {
             layout(##"{ "layout": [ { "slot": "commands", "style": "hologram" } ] }"##))
 
         #expect(parsed.rows == [.commands(style: .tile, columns: 0)])
+    }
+
+    @Test func lampsTakeAStyle() throws {
+        let parsed = try #require(
+            layout(##"{ "layout": [ { "slot": "lamps", "style": "tape" } ] }"##))
+
+        #expect(parsed.rows == [.lamps(style: .tape)])
+    }
+
+    /// Two lamps must not end up with the same tape: the row would read as printed.
+    @Test func tapeIsIrregularButStablePerLamp() {
+        #expect(SkinTape.seed(for: "keep-awake") == SkinTape.seed(for: "keep-awake"))
+        #expect(SkinTape.seed(for: "keep-awake") != SkinTape.seed(for: "battery"))
+
+        for id in ["keep-awake", "az5", "battery"] {
+            let angle = SkinTape.angle(for: SkinTape.seed(for: id))
+            #expect(abs(angle) >= 0.5)
+            #expect(abs(angle) <= 2.5)
+        }
     }
 
     @Test func columnCountsAreClamped() throws {

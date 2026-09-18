@@ -52,6 +52,9 @@ public struct SkinColors: Sendable, Equatable {
     public var gaugeFace: SkinRGBA
     public var gaugeInk: SkinRGBA
     public var needle: SkinRGBA
+    /// A strip of tape and the marker on it, for a lamp row labelled by hand.
+    public var tape: SkinRGBA
+    public var tapeInk: SkinRGBA
 
     /// Documented key order, used by the authoring README and the example skin.
     public static let keys = [
@@ -65,6 +68,7 @@ public struct SkinColors: Sendable, Equatable {
         "accent",
         "plate", "plateText", "keyWall", "keyCaution", "keyDanger",
         "gaugeFace", "gaugeInk", "needle",
+        "tape", "tapeInk",
     ]
 
     public subscript(key: String) -> SkinRGBA? {
@@ -103,6 +107,8 @@ public struct SkinColors: Sendable, Equatable {
             case "gaugeFace": return gaugeFace
             case "gaugeInk": return gaugeInk
             case "needle": return needle
+            case "tape": return tape
+            case "tapeInk": return tapeInk
             default: return nil
             }
         }
@@ -142,6 +148,8 @@ public struct SkinColors: Sendable, Equatable {
             case "gaugeFace": gaugeFace = newValue
             case "gaugeInk": gaugeInk = newValue
             case "needle": needle = newValue
+            case "tape": tape = newValue
+            case "tapeInk": tapeInk = newValue
             default: break
             }
         }
@@ -297,8 +305,10 @@ public struct SkinFonts: Sendable, Equatable {
     public var readout: SkinFontSpec
     /// Descriptions and secondary copy.
     public var body: SkinFontSpec
+    /// Anything written by hand rather than printed: a taped-on lamp label.
+    public var hand: SkinFontSpec
 
-    public static let keys = ["display", "readout", "body"]
+    public static let keys = ["display", "readout", "body", "hand"]
 }
 
 // MARK: - Effects
@@ -462,6 +472,7 @@ extension Skin {
             apply(fontOverrides["display"], to: &fonts.display, folderURL: folderURL)
             apply(fontOverrides["readout"], to: &fonts.readout, folderURL: folderURL)
             apply(fontOverrides["body"], to: &fonts.body, folderURL: folderURL)
+            apply(fontOverrides["hand"], to: &fonts.hand, folderURL: folderURL)
         }
     }
 

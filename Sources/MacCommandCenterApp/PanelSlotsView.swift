@@ -82,8 +82,8 @@ struct PanelSlotsView: View {
         case .commands(let style, let columns):
             commands(style: style, columns: columns)
 
-        case .lamps:
-            SkinLampRow(lamps: lamps)
+        case .lamps(let style):
+            SkinLampRow(lamps: lamps, style: style)
 
         case .controls(let labels):
             controls(labels)

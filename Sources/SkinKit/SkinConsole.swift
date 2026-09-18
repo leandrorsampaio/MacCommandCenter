@@ -102,7 +102,9 @@ public struct SkinModule<Content: View>: View {
 
             content
                 .padding(12)
-                .frame(maxWidth: .infinity)
+                // Fill whatever height the row settles on, so two modules bolted side by
+                // side end level instead of stepping.
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .background(
             LinearGradient(
@@ -425,6 +427,79 @@ public struct SkinGauge: View {
 
 // MARK: - Lamps
 
+/// A torn-off strip of tape. The edges are ragged, never the same twice, and the whole
+/// thing sits a degree or two off square — which is the point: it is a label somebody
+/// stuck on, not part of the panel.
+///
+/// Every irregularity is derived from `seed`, so a given lamp's tape looks identical on
+/// every redraw. Randomising it per frame made the row shimmer.
+struct SkinTape: Shape {
+
+    let seed: Int
+
+    /// Stable per lamp, and stable across launches: `hashValue` is salted per process.
+    static func seed(for id: String) -> Int {
+        var hash = 2_166_136_261
+        for byte in id.utf8 {
+            hash = (hash ^ Int(byte)) &* 16_777_619 & 0xFFFF_FFFF
+        }
+        return hash
+    }
+
+    /// Between roughly -2.5 and +2.5 degrees, skipping dead-straight.
+    static func angle(for seed: Int) -> Double {
+        let span = Double(noise(seed &+ 7) % 41) / 10 - 2
+        return span >= 0 ? span + 0.5 : span - 0.5
+    }
+
+    static func noise(_ value: Int) -> Int {
+        var hash = (value &* 2_654_435_761) & 0x7FFF_FFFF
+        hash = (hash ^ (hash >> 13)) &* 1_274_126_177 & 0x7FFF_FFFF
+        return hash ^ (hash >> 16)
+    }
+
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let jag = min(2.5, rect.width * 0.03)
+        let steps = 4
+
+        // A signed offset for irregularity `index`, within +/- `scale`.
+        func wobble(_ index: Int, scale: Double = 1) -> CGFloat {
+            let unit = Double(Self.noise(seed &+ index &* 31) % 200) / 100 - 1
+            return CGFloat(unit * jag * scale)
+        }
+
+        // The long edges are nearly straight — tape is cut across, not along.
+        path.move(to: CGPoint(x: rect.minX + wobble(1), y: rect.minY + wobble(2, scale: 0.18)))
+        path.addLine(to: CGPoint(x: rect.maxX + wobble(3), y: rect.minY + wobble(4, scale: 0.18)))
+
+        // Torn right edge, top to bottom.
+        for step in 1...steps {
+            let progress = CGFloat(step) / CGFloat(steps)
+            path.addLine(
+                to: CGPoint(
+                    x: rect.maxX + wobble(10 + step, scale: 0.7),
+                    y: rect.minY + progress * rect.height
+                ))
+        }
+
+        path.addLine(to: CGPoint(x: rect.minX + wobble(20), y: rect.maxY + wobble(21, scale: 0.18)))
+
+        // Torn left edge, bottom to top.
+        for step in 1...steps {
+            let progress = CGFloat(step) / CGFloat(steps)
+            path.addLine(
+                to: CGPoint(
+                    x: rect.minX + wobble(30 + step, scale: 0.7),
+                    y: rect.maxY - progress * rect.height
+                ))
+        }
+
+        path.closeSubpath()
+        return path
+    }
+}
+
 public struct SkinLampRow: View {
 
     public struct Lamp: Identifiable, Equatable {
@@ -440,24 +515,21 @@ public struct SkinLampRow: View {
     }
 
     private let lamps: [Lamp]
+    private let style: LampStyle
+
     @Environment(\.skin) private var skin
 
-    public init(lamps: [Lamp]) {
+    public init(lamps: [Lamp], style: LampStyle = .plain) {
         self.lamps = lamps
+        self.style = style
     }
 
     public var body: some View {
         HStack(spacing: 16) {
             ForEach(lamps) { lamp in
-                VStack(spacing: 5) {
+                VStack(spacing: style == .tape ? 9 : 5) {
                     dome(isLit: lamp.isLit)
-                    Text(skin.label(lamp.label))
-                        .font(skin.legendNoteFont)
-                        .tracking(skin.metrics.tracking * 0.5)
-                        .foregroundStyle(skin.colors.text.color)
-                        .lineLimit(2)
-                        .multilineTextAlignment(.center)
-                        .minimumScaleFactor(0.6)
+                    caption(lamp)
                 }
                 .frame(maxWidth: .infinity)
             }
@@ -465,6 +537,53 @@ public struct SkinLampRow: View {
         // Bolted straight to the chassis: no recessed strip behind them, so the lamps
         // sit on the same metal as everything else on the panel.
         .padding(.vertical, 12)
+    }
+
+    @ViewBuilder
+    private func caption(_ lamp: Lamp) -> some View {
+        switch style {
+        case .plain:
+            Text(skin.label(lamp.label))
+                .font(skin.legendNoteFont)
+                .tracking(skin.metrics.tracking * 0.5)
+                .foregroundStyle(skin.colors.text.color)
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
+                .minimumScaleFactor(0.6)
+
+        case .tape:
+            // Nobody re-engraves a plate to rename a lamp. They write on tape.
+            let seed = SkinTape.seed(for: lamp.id)
+            Text(lamp.label.uppercased())
+                .font(skin.handFont)
+                .tracking(0.3)
+                .foregroundStyle(skin.colors.tapeInk.color)
+                .lineLimit(1)
+                .minimumScaleFactor(0.55)
+                .padding(.horizontal, 9)
+                .padding(.vertical, 4)
+                .background {
+                    SkinTape(seed: seed)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    skin.colors.tape.opacity(0.97),
+                                    skin.colors.tape.opacity(0.86),
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .overlay {
+                            // Tape is not opaque: the chassis darkens it near the edges
+                            // where it is pressed down.
+                            SkinTape(seed: seed)
+                                .stroke(.black.opacity(0.14), lineWidth: 1)
+                        }
+                        .shadow(color: .black.opacity(0.45), radius: 1.5, x: 0.5, y: 1.5)
+                }
+                .rotationEffect(.degrees(SkinTape.angle(for: seed)))
+        }
     }
 
     /// Domed glass: a hot core off-centre, a bezel ring, and bloom only when lit.
