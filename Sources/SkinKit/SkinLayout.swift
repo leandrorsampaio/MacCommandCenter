@@ -16,7 +16,7 @@ public struct SkinLayout: Sendable, Equatable {
 
     /// What every skin got before layouts existed.
     public static let stack = SkinLayout(rows: [
-        .readout(style: .lcd),
+        .readout(ReadoutSpec(style: .lcd)),
         .commands(style: .tile, columns: 0),
     ])
 }
@@ -26,12 +26,12 @@ public indirect enum SkinSlot: Sendable, Equatable {
     case nameplate(title: String?, subtitle: String?)
     /// One backlit legend cell per command, lit when that command is engaged.
     case annunciator
-    case readout(style: ReadoutStyle)
-    case gauge(source: GaugeSource, width: Double?)
+    case readout(ReadoutSpec)
+    case gauge(GaugeSpec)
     /// The command buttons. `columns` of 0 means "one row, share the width".
     case commands(style: CommandStyle, columns: Int)
-    /// A row of indicator lamps mirroring command state.
-    case lamps(style: LampStyle)
+    /// A row of indicator lamps. What they watch is `sources`.
+    case lamps(style: LampStyle, sources: [LampSource])
     /// Float-on-top and close, as panel controls rather than titlebar boxes. Each takes
     /// an optional label and sub-label so a skin can word them in its own language.
     case controls(labels: ControlLabels)
@@ -59,15 +59,123 @@ public struct ControlLabels: Sendable, Equatable {
     }
 }
 
+// MARK: - What an instrument is wired to
+
+/// The needle's input.
+public enum GaugeSource: Sendable, Equatable {
+    case battery
+    /// A named signal, written `"signal:claude.context"`.
+    case signal(String)
+
+    public init?(raw: String) {
+        if raw == "battery" {
+            self = .battery
+        } else if let name = Self.signalName(raw) {
+            self = .signal(name)
+        } else {
+            return nil
+        }
+    }
+
+    static func signalName(_ raw: String) -> String? {
+        let prefix = "signal:"
+        guard raw.hasPrefix(prefix) else { return nil }
+        let name = String(raw.dropFirst(prefix.count))
+        return name.isEmpty ? nil : name
+    }
+}
+
+/// A line of a readout.
+public enum ReadoutSource: Sendable, Equatable {
+    /// How long the active command has been engaged.
+    case uptime
+    /// What is engaged right now.
+    case mode
+    case signal(String)
+
+    public init?(raw: String) {
+        switch raw {
+        case "uptime": self = .uptime
+        case "mode": self = .mode
+        default:
+            guard let name = GaugeSource.signalName(raw) else { return nil }
+            self = .signal(name)
+        }
+    }
+}
+
+/// What a lamp watches.
+public enum LampSource: Sendable, Equatable {
+    /// One lamp per command in the config, lit when that command is engaged.
+    case commands
+    case battery
+    case signal(String)
+
+    public init?(raw: String) {
+        switch raw {
+        case "commands": self = .commands
+        case "battery": self = .battery
+        default:
+            guard let name = GaugeSource.signalName(raw) else { return nil }
+            self = .signal(name)
+        }
+    }
+}
+
+// MARK: - Instrument specs
+
+public struct GaugeSpec: Sendable, Equatable {
+    public var source: GaugeSource
+    public var width: Double?
+    /// The module caption. Defaults to what the source calls itself.
+    public var caption: String?
+    /// The small legend in the caption strip's far corner.
+    public var trailing: String?
+
+    public init(
+        source: GaugeSource, width: Double? = nil, caption: String? = nil,
+        trailing: String? = nil
+    ) {
+        self.source = source
+        self.width = width
+        self.caption = caption
+        self.trailing = trailing
+    }
+}
+
+public struct ReadoutSpec: Sendable, Equatable {
+    public var style: ReadoutStyle
+    public var caption: String?
+    public var trailing: String?
+    public var primary: ReadoutSource
+    public var primaryCaption: String?
+    public var secondary: ReadoutSource
+    public var secondaryCaption: String?
+
+    public init(
+        style: ReadoutStyle,
+        caption: String? = nil,
+        trailing: String? = nil,
+        primary: ReadoutSource = .uptime,
+        primaryCaption: String? = nil,
+        secondary: ReadoutSource = .mode,
+        secondaryCaption: String? = nil
+    ) {
+        self.style = style
+        self.caption = caption
+        self.trailing = trailing
+        self.primary = primary
+        self.primaryCaption = primaryCaption
+        self.secondary = secondary
+        self.secondaryCaption = secondaryCaption
+    }
+}
+
 public enum ReadoutStyle: String, Sendable, Codable {
     /// The original single strip.
     case lcd
     /// A large glowing counter plus a mode line.
     case nixie
-}
-
-public enum GaugeSource: String, Sendable, Codable {
-    case battery
 }
 
 public enum LampStyle: String, Sendable, Codable {
@@ -113,8 +221,16 @@ extension SkinSlot {
                 subtitle: entry["subtitle"] as? String
             )
         case "annunciator": self = .annunciator
+
         case "lamps":
-            self = .lamps(style: LampStyle(rawValue: entry["style"] as? String ?? "") ?? .plain)
+            let style = LampStyle(rawValue: entry["style"] as? String ?? "") ?? .plain
+            let sources = (entry["sources"] as? [Any] ?? []).compactMap {
+                ($0 as? String).flatMap(LampSource.init(raw:))
+            }
+            // A lamp row that named nothing usable still lights the commands: an
+            // unreadable `sources` should not leave the row empty.
+            self = .lamps(style: style, sources: sources.isEmpty ? [.commands, .battery] : sources)
+
         case "controls":
             self = .controls(
                 labels: ControlLabels(
@@ -126,11 +242,28 @@ extension SkinSlot {
         case "spacer": self = .spacer
 
         case "readout":
-            self = .readout(style: ReadoutStyle(rawValue: entry["style"] as? String ?? "") ?? .lcd)
+            self = .readout(
+                ReadoutSpec(
+                    style: ReadoutStyle(rawValue: entry["style"] as? String ?? "") ?? .lcd,
+                    caption: entry["caption"] as? String,
+                    trailing: entry["trailing"] as? String,
+                    primary: (entry["primary"] as? String).flatMap(ReadoutSource.init(raw:))
+                        ?? .uptime,
+                    primaryCaption: entry["primaryCaption"] as? String,
+                    secondary: (entry["secondary"] as? String).flatMap(ReadoutSource.init(raw:))
+                        ?? .mode,
+                    secondaryCaption: entry["secondaryCaption"] as? String
+                ))
 
         case "gauge":
-            let source = GaugeSource(rawValue: entry["source"] as? String ?? "") ?? .battery
-            self = .gauge(source: source, width: entry["width"] as? Double)
+            let source = (entry["source"] as? String).flatMap(GaugeSource.init(raw:)) ?? .battery
+            self = .gauge(
+                GaugeSpec(
+                    source: source,
+                    width: entry["width"] as? Double,
+                    caption: entry["caption"] as? String,
+                    trailing: entry["trailing"] as? String
+                ))
 
         case "commands":
             let style = CommandStyle(rawValue: entry["style"] as? String ?? "") ?? .tile

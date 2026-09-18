@@ -17,6 +17,7 @@ import SkinKit
 final class AppModel {
 
     let center = CommandCenter()
+    let signals = SignalCenter()
     let skins = SkinCatalog()
     let configs = ConfigCatalog()
     let runtime = ActionRuntime()
@@ -48,7 +49,14 @@ final class AppModel {
         floatsOnTop = defaults.object(forKey: Keys.floatsOnTop) as? Bool ?? true
         launchesAtLogin = SMAppService.mainApp.status == .enabled
 
-        server = ControlServer(center: center)
+        server = ControlServer(center: center, signals: signals)
+
+        // Reading what another tool leaves in the home folder is a direct-build thing:
+        // the App Store build is sandboxed and has no business outside its container.
+        #if !APP_STORE
+        signals.add(ClaudeCodeSource())
+        #endif
+        signals.start()
 
         runtime.consentPrompt = { [weak self] action in
             await self?.requestShellConsent(action) ?? .deny

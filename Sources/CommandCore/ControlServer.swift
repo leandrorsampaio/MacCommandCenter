@@ -30,9 +30,15 @@ public final class ControlServer {
     // Held strongly: a server outliving its registry has nothing to serve, and
     // `CommandCenter` never refers back, so there is no cycle.
     @ObservationIgnored private let center: CommandCenter
+    @ObservationIgnored private let signals: SignalCenter?
 
-    public init(center: CommandCenter, port: UInt16 = ControlServer.defaultPort) {
+    public init(
+        center: CommandCenter,
+        signals: SignalCenter? = nil,
+        port: UInt16 = ControlServer.defaultPort
+    ) {
         self.center = center
+        self.signals = signals
         self.port = port
     }
 
@@ -119,7 +125,37 @@ public final class ControlServer {
             return .text(Self.usageText(port: port))
 
         case ["v1", "state"], ["v1", "commands"]:
-            return .json(center.snapshot())
+            return .json(stateSnapshot())
+
+        case ["v1", "signals"]:
+            guard let signals else { return .failure("Signals are not available.", status: 404) }
+            return .json(signals.snapshot())
+
+        // A hook reporting an event the file system cannot show: an agent finishing, or
+        // Claude Code waiting on an answer. Same header guard as a command, because it
+        // changes what the panel says.
+        case let parts where parts.count == 3 && parts[0] == "v1" && parts[1] == "signals":
+            guard let signals else { return .failure("Signals are not available.", status: 404) }
+            guard let guardFailure = Self.mutationGuard(request) else {
+                let id = parts[2]
+                let query = request.query
+                if query["clear"] == "1" {
+                    signals.clear(id: id)
+                } else {
+                    signals.push(
+                        id: id,
+                        label: query["label"],
+                        fraction: query["fraction"].flatMap(Double.init),
+                        text: query["text"],
+                        // Anything that reports at all is on unless it says otherwise:
+                        // a hook firing is itself the event.
+                        isActive: query["active"].map { $0 != "0" && $0 != "false" } ?? true,
+                        ttl: query["ttl"].flatMap(Double.init)
+                    )
+                }
+                return .json(signals.snapshot())
+            }
+            return guardFailure
 
         case let parts where parts.count == 4 && parts[0] == "v1" && parts[1] == "commands":
             let id = CommandID(parts[2])
@@ -131,13 +167,7 @@ public final class ControlServer {
             // custom header without a preflight, and no preflight is answered here, so
             // this keeps a web page from driving the API while costing a script or a
             // firmware client one extra line.
-            guard request.headers[Self.clientHeader] != nil, request.headers["origin"] == nil
-            else {
-                return .failure(
-                    "Mutating requests must send the \(Self.clientHeaderName) header and no Origin.",
-                    status: 403
-                )
-            }
+            if let failure = Self.mutationGuard(request) { return failure }
 
             let commandRequest: CommandRequest
             switch verb {
@@ -160,7 +190,7 @@ public final class ControlServer {
 
             do {
                 try center.perform(commandRequest, on: id)
-                return .json(center.snapshot())
+                return .json(stateSnapshot())
             } catch {
                 return .failure(error.localizedDescription, status: 400)
             }
@@ -168,6 +198,26 @@ public final class ControlServer {
         default:
             return .failure("No route for \(request.method) \(request.path).", status: 404)
         }
+    }
+
+    private func stateSnapshot() -> CommandSnapshot {
+        var snapshot = center.snapshot()
+        if let signals, !signals.signals.isEmpty { snapshot.signals = signals.snapshot() }
+        return snapshot
+    }
+
+    /// A browser can send a cross-origin GET or simple POST to loopback without CORS
+    /// stopping the request — only the response is hidden. It cannot set a custom header
+    /// without a preflight, and no preflight is answered here, so this keeps a web page
+    /// from driving the API while costing a script or a firmware client one extra line.
+    private static func mutationGuard(_ request: HTTPRequest) -> HTTPResponse? {
+        guard request.headers[clientHeader] != nil, request.headers["origin"] == nil else {
+            return .failure(
+                "Mutating requests must send the \(clientHeaderName) header and no Origin.",
+                status: 403
+            )
+        }
+        return nil
     }
 
     private static func usageText(port: UInt16) -> String {
@@ -179,6 +229,8 @@ public final class ControlServer {
           ANY  /v1/commands/{id}/activate?option={optionID}
           ANY  /v1/commands/{id}/toggle?option={optionID}
           ANY  /v1/commands/{id}/deactivate
+          GET  /v1/signals
+          ANY  /v1/signals/{id}?text=...&fraction=...&active=1&ttl=60
 
         Example:
           curl "http://127.0.0.1:\(port)/v1/commands/keep-awake/activate?option=display-off"

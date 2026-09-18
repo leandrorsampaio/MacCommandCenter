@@ -6,6 +6,36 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Signals: things the panel watches rather than switches.** A command has an owner that
+  can be told to change state; a signal has a source that reports it and nothing the panel
+  can do about it. One signal carries a fraction for a needle, a line of text for a
+  readout and an active flag for a lamp, and an instrument uses whichever it needs.
+  Instruments bind by name — `"source": "signal:claude.context"` — and binding to a signal
+  nothing reports is not an error: the needle reads zero and the lamp stays dark.
+- **Claude Code on the panel.** Context left, session cost and token totals as
+  instruments, plus lamps for working, waiting on you, and just finished. The first group
+  is read from the files Claude Code already writes; the last two are pushed by hooks
+  (`scripts/install-claude-hooks.sh`, which leaves your own hooks alone, does not stack up
+  on re-runs and keeps a backup).
+
+  The transcript is *followed* rather than re-read: a long session's file runs to tens of
+  megabytes, and the `cost-state` checkpoint that carries the dollar figure sits megabytes
+  back from the end, so a tail window found it at the start of a session and lost it by
+  the middle. Each file is read once and only its new bytes after that — 294 ms for 26 MB,
+  then nothing.
+
+  Not included: the five-hour and weekly quota. It is not written to disk anywhere, and an
+  undocumented endpoint is not something to hang an instrument on.
+- **`POST /v1/signals/{id}`**, so anything on the machine can report into the panel —
+  `text`, `fraction`, `active` and a `ttl` after which the reading stops being believed. A
+  source that dies stops lighting its lamp instead of lying until the next launch. Behind
+  the same header guard as a command, and `/v1/state` now carries signals too.
+- Layout slots gained the bindings to go with it: a `gauge` takes `signal:<id>` as well as
+  `battery`, a `readout` says what each of its two lines shows, and `lamps` takes
+  `sources` — any mix of `commands`, `battery` and named signals.
+
 ### Changed
 
 - **The Reactor Control skin is now "RBMK Mac Control Panel"**, nameplate included

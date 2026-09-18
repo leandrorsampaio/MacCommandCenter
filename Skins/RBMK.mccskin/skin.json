@@ -28,13 +28,49 @@
       ]
     },
     {
+      "slot": "row",
+      "children": [
+        {
+          "slot": "gauge",
+          "source": "signal:claude.context",
+          "caption": "Context",
+          "trailing": "LEFT",
+          "width": 168
+        },
+        {
+          "slot": "readout",
+          "style": "nixie",
+          "caption": "Claude Code",
+          "trailing": "STATUS",
+          "primary": "signal:claude.cost",
+          "primaryCaption": "Session cost",
+          "secondary": "signal:claude.tokens",
+          "secondaryCaption": "Tokens"
+        }
+      ]
+    },
+    {
       "slot": "commands",
       "style": "key",
       "columns": 2
     },
     {
       "slot": "lamps",
-      "style": "tape"
+      "style": "tape",
+      "sources": [
+        "commands",
+        "battery"
+      ]
+    },
+    {
+      "slot": "lamps",
+      "style": "tape",
+      "sources": [
+        "signal:claude.busy",
+        "signal:claude.waiting",
+        "signal:claude.done",
+        "signal:claude.context"
+      ]
     },
     {
       "slot": "spacer"

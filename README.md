@@ -54,9 +54,10 @@ Mac. Clamshell sleep is enforced below the assertion layer, so no app can overri
 </p>
 
 
-Five skins ship with the app. **RBMK Mac Control Panel** is the one that shows what the format
-can do: it declares a `layout`, so it is square, has an annunciator strip, a needle gauge,
-an amber counter and latching keys — none of which the default panel has any concept of.
+Five skins ship with the app. **RBMK Mac Control Panel** is the one that shows what the
+format can do: it declares a `layout`, so it is square, has an annunciator strip, needle
+gauges, amber counters, latching keys and lamps labelled on strips of tape — none of which
+the default panel has any concept of.
 
 <p align="center">
   <img src="docs/images/panel-reactor.png" width="440" alt="RBMK Mac Control Panel skin">
@@ -68,6 +69,23 @@ an amber counter and latching keys — none of which the default panel has any c
 
 Everything is optional — a manifest overrides only what it names. Saving a file reloads
 the open window, so you can edit next to it. → **[docs/SKINS.md](docs/SKINS.md)**
+
+## Watching, not just switching
+
+A command is something you press. A **signal** is something you read, and an instrument
+binds to one by name — `"source": "signal:claude.context"`. Anything that can make a local
+HTTP request can report one:
+
+```bash
+curl -H "X-MCC-Client: 1" \
+  "http://127.0.0.1:8787/v1/signals/build.status?text=passing&active=1&ttl=600"
+```
+
+Out of the box that is pointed at **Claude Code**: context left, session cost, tokens, and
+lamps for working, waiting on you, and just finished. The first three are read from the
+files Claude Code already writes; the last two are pushed by hooks, installed with
+`scripts/install-claude-hooks.sh`. →
+**[docs/AUTOMATION.md](docs/AUTOMATION.md#watching-claude-code)**
 
 A config is a `.mccconfig` folder that decides which buttons exist, what they say and what
 they do: keep awake, open a URL, or run a shell command. Build one in **Settings › Configs**

@@ -176,10 +176,10 @@ panel itself:
 |---|---|
 | `nameplate` | An engraved header plate. Defaults to the config's name |
 | `annunciator` | A backlit legend cell per command, plus mains and on-top |
-| `readout` | `style`: `lcd` (the original strip) or `nixie` (a large counter) |
-| `gauge` | `source`: `battery`. Optional `width` |
+| `readout` | `style`: `lcd` or `nixie`. `primary`/`secondary` say what each line shows |
+| `gauge` | `source`: `battery` or `signal:<id>`. Optional `width`, `caption`, `trailing` |
 | `commands` | The buttons. `style`: `tile` or `key`. `columns`: `0` means one row |
-| `lamps` | An indicator lamp per command, plus battery. `style`: `plain` or `tape` |
+| `lamps` | Indicator lamps. `style`: `plain` or `tape`. `sources` says what they watch |
 | `controls` | Float-on-top and close, as panel keys. Takes `onTop`, `onTopNote`, `close`, `closeNote`; English by default |
 | `spacer` | Pushes everything after it to the bottom |
 | `row` | Lays its `children` out side by side |
@@ -192,6 +192,38 @@ the annunciator, not on the cap.
 font instead of printing it under the lamp — for a panel that looks relabelled rather than
 manufactured. The tear and the angle come from the command's id, so a given lamp looks the
 same on every redraw.
+
+## Watching things, not just switching them
+
+A command is something you press. A **signal** is something you read — how full a context
+window is, whether a background job is running, what a session has cost. Instruments bind
+to one by name:
+
+```json
+{ "slot": "gauge", "source": "signal:claude.context", "caption": "Context", "trailing": "LEFT" },
+{ "slot": "readout", "style": "nixie", "caption": "Claude Code",
+  "primary": "signal:claude.cost", "primaryCaption": "Session cost",
+  "secondary": "signal:claude.tokens", "secondaryCaption": "Tokens" },
+{ "slot": "lamps", "style": "tape",
+  "sources": ["signal:claude.busy", "signal:claude.waiting", "signal:claude.done"] }
+```
+
+A readout line takes `uptime`, `mode` or `signal:<id>`. A lamp source takes `commands`
+(one lamp per command in the config), `battery` or `signal:<id>`.
+
+A signal carries up to three readings, and an instrument uses the one it needs: a
+**fraction** for a needle, a **text** line for a readout, and **active** for a lamp. On a
+reading, active means *alarm* rather than *healthy* — the context lamp lights when the
+window is nearly full, the way a panel lamp means "look at this".
+
+Binding to a signal nothing reports is not an error: the gauge reads zero, the readout
+reads `--` and the lamp stays dark. A skin can name a signal that only some machines have.
+
+What ships: `claude.context`, `claude.cost`, `claude.tokens`, `claude.busy`,
+`claude.sessions` (read from Claude Code's own files), and `claude.waiting`,
+`claude.done`, `claude.agent` (pushed by hooks). See
+[AUTOMATION.md](AUTOMATION.md#watching-claude-code). Anything can push its own with one
+HTTP request, so a skin is free to invent names the app has never heard of.
 
 **The app draws every one of these.** A skin chooses from the vocabulary and says what
 goes where — it never supplies code, markup or images that get executed. A slot this

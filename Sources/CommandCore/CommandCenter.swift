@@ -167,10 +167,14 @@ public struct CommandSnapshot: Codable, Sendable {
     public let ok: Bool
     public let commands: [Entry]
     public let error: String?
+    /// What the panel is watching. Omitted when nothing reports, so a client written
+    /// against the older shape sees exactly what it saw before.
+    public var signals: [Signal]?
 
-    public init(ok: Bool, commands: [Entry], error: String?) {
+    public init(ok: Bool, commands: [Entry], error: String?, signals: [Signal]? = nil) {
         self.ok = ok
         self.commands = commands
         self.error = error
+        self.signals = signals
     }
 }

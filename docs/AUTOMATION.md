@@ -117,9 +117,12 @@ is a shell command.
 ```
 GET  /v1/state                                          read, open
 GET  /v1/commands                                       read, open
+GET  /v1/signals                                        read, open
 ANY  /v1/commands/{id}/activate?option={optionID}       needs the header
 ANY  /v1/commands/{id}/toggle?option={optionID}         needs the header
 ANY  /v1/commands/{id}/deactivate                       needs the header
+ANY  /v1/signals/{id}?text=…&fraction=…&active=…&ttl=…  needs the header
+ANY  /v1/signals/{id}?clear=1                           needs the header
 ```
 
 Anything that changes state must send `X-MCC-Client` and must not send `Origin`:
@@ -136,6 +139,69 @@ simplest possible firmware can drive it with one request.
 
 Reading `/v1/state` gives you every command, its options and what is currently on — which
 is what you would poll to light an LED on a button box.
+
+---
+
+## Watching Claude Code
+
+The panel can report on Claude Code as well as drive your Mac: how much context is left,
+what the session has cost, whether one is working, and whether one is waiting on you.
+
+**What it reads, with nothing switched on.** Claude Code keeps `~/.claude/sessions/*.json`
+for each running session and a transcript per session under `~/.claude/projects/`. Reading
+those gives five signals, polled every few seconds:
+
+| Signal | Reading |
+|---|---|
+| `claude.context` | Tokens left in the window, as a fraction and a line. Alarms under 20% |
+| `claude.cost` | Session cost in dollars, as of the last checkpoint |
+| `claude.tokens` | Tokens in and out, live |
+| `claude.busy` | Lit while a session is working |
+| `claude.sessions` | How many are running |
+
+The transcript is read once and followed after that, the way `tail -f` does — a long
+session's file runs to tens of megabytes, and re-reading it every few seconds to watch two
+numbers would be absurd.
+
+Two caveats worth knowing. **Cost updates at checkpoints**, not continuously: Claude Code
+writes its `cost-state` record when a session starts, compacts and exits, so the figure is
+the newest one on disk rather than the figure this second. Tokens are summed live and are
+current. And **the five-hour and weekly quota is not available** — it is not written to
+disk anywhere, and an undocumented endpoint is not something to hang an instrument on.
+
+This half is direct-download only. The App Store build is sandboxed and has no business
+reading another tool's files in your home folder.
+
+**What needs hooks.** "A run just finished" and "Claude is waiting for you" leave no trace
+on disk, so they are pushed instead:
+
+```bash
+scripts/install-claude-hooks.sh            # show what would change
+scripts/install-claude-hooks.sh --install  # write it
+scripts/install-claude-hooks.sh --remove   # take it back out
+```
+
+That adds four hooks to `~/.claude/settings.json`, each one `curl` into the control API:
+`Stop` lights `claude.done`, `Notification` lights `claude.waiting`, `SubagentStop` lights
+`claude.agent`, and `UserPromptSubmit` clears the first two. Your own hooks are left where
+they are, re-running does not stack them up, and the previous settings are kept alongside
+as `settings.json.mcc-backup`.
+
+Every call is best-effort — `-m 2` and `|| true` — so a closed panel or a control API
+switched off costs the hook nothing.
+
+**Pushing your own.** Nothing about this is specific to Claude Code. Any script can report
+into the panel:
+
+```bash
+curl -H "X-MCC-Client: 1" \
+  "http://127.0.0.1:8787/v1/signals/build.status?label=Build&text=passing&ttl=600"
+```
+
+`fraction` (0…1) drives a needle, `text` a readout line, `active` a lamp, and `ttl`
+seconds is how long it is believed — a source that stops reporting stops lighting its
+lamp rather than lying until the next launch. A skin binds to it by name; see
+[SKINS.md](SKINS.md#watching-things-not-just-switching-them).
 
 ---
 

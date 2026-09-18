@@ -180,7 +180,11 @@ struct SkinLayoutTests {
             Issue.record("expected a row")
             return
         }
-        #expect(children == [.gauge(source: .battery, width: 168), .readout(style: .nixie)])
+        #expect(
+            children == [
+                .gauge(GaugeSpec(source: .battery, width: 168)),
+                .readout(ReadoutSpec(style: .nixie)),
+            ])
     }
 
     /// A layout written for a later version must still render what this build knows.
@@ -194,7 +198,7 @@ struct SkinLayoutTests {
                 ]}
                 """))
 
-        #expect(parsed.rows == [.lamps(style: .plain)])
+        #expect(parsed.rows == [.lamps(style: .plain, sources: [.commands, .battery])])
     }
 
     @Test func unknownStylesFallBackRatherThanFailing() throws {
@@ -208,7 +212,7 @@ struct SkinLayoutTests {
         let parsed = try #require(
             layout(##"{ "layout": [ { "slot": "lamps", "style": "tape" } ] }"##))
 
-        #expect(parsed.rows == [.lamps(style: .tape)])
+        #expect(parsed.rows == [.lamps(style: .tape, sources: [.commands, .battery])])
     }
 
     /// Two lamps must not end up with the same tape: the row would read as printed.

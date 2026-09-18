@@ -47,43 +47,47 @@ struct PanelSlotsView: View {
         case .annunciator:
             SkinAnnunciator(cells: annunciatorCells)
 
-        case .readout(let style):
-            switch style {
+        case .readout(let spec):
+            switch spec.style {
             case .lcd:
                 ReadoutView(
-                    primary: skin.label(modeLine),
+                    primary: skin.label(line(for: spec.primary)),
                     secondary: skin.label(model.powerSource.rawValue),
                     isActive: model.center.isAnythingActive,
                     since: activeSince
                 )
             case .nixie:
-                SkinModule(caption: "Indicators", trailing: "SKALA") {
+                SkinModule(
+                    caption: spec.caption ?? "Indicators", trailing: spec.trailing ?? "SKALA"
+                ) {
+                    // One second is the counter's resolution, and it is the only thing on
+                    // the panel that needs a clock.
                     TimelineView(.periodic(from: .now, by: 1)) { _ in
                         SkinNixie(
-                            caption: "Uptime",
-                            value: uptime,
-                            secondCaption: "Mode",
-                            secondValue: modeLine,
-                            isActive: model.center.isAnythingActive
+                            caption: spec.primaryCaption ?? caption(for: spec.primary),
+                            value: line(for: spec.primary),
+                            secondCaption: spec.secondaryCaption ?? caption(for: spec.secondary),
+                            secondValue: line(for: spec.secondary),
+                            isActive: isLive(spec.primary)
                         )
                     }
                 }
             }
 
-        case .gauge(let source, let width):
-            switch source {
-            case .battery:
-                SkinModule(caption: "Battery", trailing: "%") {
-                    SkinGauge(value: model.powerStatus.charge ?? 1, caption: "")
-                }
-                .frame(width: width.map { CGFloat($0) })
+        case .gauge(let spec):
+            SkinModule(
+                caption: spec.caption ?? caption(for: spec.source),
+                trailing: spec.trailing ?? "%"
+            ) {
+                SkinGauge(value: reading(for: spec.source), caption: "")
             }
+            .frame(width: spec.width.map { CGFloat($0) })
 
         case .commands(let style, let columns):
             commands(style: style, columns: columns)
 
-        case .lamps(let style):
-            SkinLampRow(lamps: lamps, style: style)
+        case .lamps(let style, let sources):
+            SkinLampRow(lamps: lamps(from: sources), style: style)
 
         case .controls(let labels):
             controls(labels)
@@ -300,21 +304,85 @@ struct PanelSlotsView: View {
         return cells
     }
 
-    private var lamps: [SkinLampRow.Lamp] {
-        var lamps = model.center.descriptors.map { descriptor in
-            SkinLampRow.Lamp(
-                id: descriptor.id.rawValue,
-                label: legend(descriptor.title),
-                isLit: model.center.state(for: descriptor.id).isActive
-            )
+    private func lamps(from sources: [LampSource]) -> [SkinLampRow.Lamp] {
+        var lamps: [SkinLampRow.Lamp] = []
+        for source in sources {
+            switch source {
+            case .commands:
+                lamps += model.center.descriptors.map { descriptor in
+                    SkinLampRow.Lamp(
+                        id: descriptor.id.rawValue,
+                        label: legend(descriptor.title),
+                        isLit: model.center.state(for: descriptor.id).isActive
+                    )
+                }
+            case .battery:
+                lamps.append(
+                    SkinLampRow.Lamp(
+                        id: "battery",
+                        label: "Battery",
+                        isLit: (model.powerStatus.charge ?? 1) > 0.2
+                    ))
+            case .signal(let id):
+                // A signal that has not reported yet still gets its lamp, dark. Dropping
+                // it would make the row shuffle the moment a source woke up.
+                let signal = model.signals.signal(id)
+                lamps.append(
+                    SkinLampRow.Lamp(
+                        id: "signal." + id,
+                        label: signal?.label ?? Self.name(fromSignalID: id),
+                        isLit: signal?.isActive ?? false
+                    ))
+            }
         }
-        lamps.append(
-            SkinLampRow.Lamp(
-                id: "battery",
-                label: "Battery",
-                isLit: (model.powerStatus.charge ?? 1) > 0.2
-            ))
         return lamps
+    }
+
+    // MARK: - Signals
+
+    /// What a readout line says.
+    private func line(for source: ReadoutSource) -> String {
+        switch source {
+        case .uptime: uptime
+        case .mode: modeLine
+        case .signal(let id): model.signals.signal(id)?.text ?? "--"
+        }
+    }
+
+    private func caption(for source: ReadoutSource) -> String {
+        switch source {
+        case .uptime: "Uptime"
+        case .mode: "Mode"
+        case .signal(let id): model.signals.signal(id)?.label ?? Self.name(fromSignalID: id)
+        }
+    }
+
+    private func caption(for source: GaugeSource) -> String {
+        switch source {
+        case .battery: "Battery"
+        case .signal(let id): model.signals.signal(id)?.label ?? Self.name(fromSignalID: id)
+        }
+    }
+
+    /// Whether the counter glows: something is running, or the signal is reporting.
+    private func isLive(_ source: ReadoutSource) -> Bool {
+        switch source {
+        case .uptime, .mode: model.center.isAnythingActive
+        case .signal(let id): model.signals.signal(id) != nil
+        }
+    }
+
+    private func reading(for source: GaugeSource) -> Double {
+        switch source {
+        case .battery: model.powerStatus.charge ?? 1
+        case .signal(let id): model.signals.signal(id)?.fraction ?? 0
+        }
+    }
+
+    /// "claude.context" reads as "Context" until the source says what it is called.
+    static func name(fromSignalID id: String) -> String {
+        let tail = id.split(separator: ".").last.map(String.init) ?? id
+        return tail.prefix(1).uppercased() + tail.dropFirst()
     }
 
     private var activeSince: Date? {
