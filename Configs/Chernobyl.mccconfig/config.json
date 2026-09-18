@@ -52,7 +52,7 @@
             {
               "id": "scram",
               "title": "АЗ-5 · Сброс",
-              "subtitle": "Scram — blank the display now",
+              "subtitle": "Scram",
               "icon": "bolt.slash.fill",
               "action": {
                 "type": "shell",

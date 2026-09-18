@@ -1,6 +1,6 @@
 # Sounds
 
-`click.wav` is the key click for Reactor Control, named by `chrome.keySound` in
+`click.wav` is the key click for the RBMK panel, named by `chrome.keySound` in
 `skin.json`.
 
 ## Provenance

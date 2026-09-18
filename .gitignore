@@ -9,4 +9,4 @@ build/
 Skins/**/sounds/*.mp3
 Skins/**/sounds/*.aiff
 Skins/**/sounds/*.m4a
-!Skins/Chernobyl.mccskin/sounds/click.wav
+!Skins/RBMK.mccskin/sounds/click.wav

@@ -54,12 +54,12 @@ Mac. Clamshell sleep is enforced below the assertion layer, so no app can overri
 </p>
 
 
-Five skins ship with the app. **Reactor Control** is the one that shows what the format
+Five skins ship with the app. **RBMK Mac Control Panel** is the one that shows what the format
 can do: it declares a `layout`, so it is square, has an annunciator strip, a needle gauge,
 an amber counter and latching keys — none of which the default panel has any concept of.
 
 <p align="center">
-  <img src="docs/images/panel-reactor.png" width="440" alt="Reactor Control skin">
+  <img src="docs/images/panel-reactor.png" width="440" alt="RBMK Mac Control Panel skin">
 </p>
 
 ```json

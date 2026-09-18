@@ -154,7 +154,7 @@ public struct SkinAnnunciator: View {
         HStack(spacing: 7) {
             ForEach(cells) { cell in
                 Text(skin.label(cell.label))
-                    .font(skin.bodyFont)
+                    .font(skin.legendNoteFont)
                     .tracking(skin.metrics.tracking * 0.6)
                     .lineLimit(2)
                     .multilineTextAlignment(.center)
@@ -452,7 +452,7 @@ public struct SkinLampRow: View {
                 VStack(spacing: 5) {
                     dome(isLit: lamp.isLit)
                     Text(skin.label(lamp.label))
-                        .font(skin.bodyFont)
+                        .font(skin.legendNoteFont)
                         .tracking(skin.metrics.tracking * 0.5)
                         .foregroundStyle(skin.colors.text.color)
                         .lineLimit(2)
@@ -462,11 +462,9 @@ public struct SkinLampRow: View {
                 .frame(maxWidth: .infinity)
             }
         }
+        // Bolted straight to the chassis: no recessed strip behind them, so the lamps
+        // sit on the same metal as everything else on the panel.
         .padding(.vertical, 12)
-        .padding(.horizontal, 14)
-        .background(.black.opacity(0.10))
-        .overlay(alignment: .top) { Rectangle().fill(.white.opacity(0.18)).frame(height: 1) }
-        .clipShape(RoundedRectangle(cornerRadius: skin.metrics.cornerRadius, style: .continuous))
     }
 
     /// Domed glass: a hot core off-centre, a bezel ring, and bloom only when lit.

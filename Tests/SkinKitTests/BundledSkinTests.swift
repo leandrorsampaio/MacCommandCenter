@@ -41,12 +41,12 @@ struct BundledSkinTests {
         }
     }
 
-    /// Reactor Control is the worked example for layouts; if its layout stops parsing the
+    /// The RBMK panel is the worked example for layouts; if its layout stops parsing the
     /// app silently renders the default stack instead.
-    @Test func reactorControlDeclaresAConsoleLayout() throws {
+    @Test func rbmkPanelDeclaresAConsoleLayout() throws {
         let manifest =
             skinsDirectory
-            .appendingPathComponent("Chernobyl.mccskin/skin.json")
+            .appendingPathComponent("RBMK.mccskin/skin.json")
         let data = try Data(contentsOf: manifest)
         let raw = try #require(
             try JSONSerialization.jsonObject(with: data) as? [String: Any])
@@ -100,12 +100,12 @@ struct BundledSoundTests {
 
     /// A skin naming a sound it does not ship falls back silently, which reads as "the
     /// click stopped working". For a skin we ship, that should fail here instead.
-    @Test func reactorControlShipsTheClickItNames() throws {
+    @Test func rbmkPanelShipsTheClickItNames() throws {
         let folder = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .deletingLastPathComponent()
-            .appendingPathComponent("Skins/Chernobyl.mccskin", isDirectory: true)
+            .appendingPathComponent("Skins/RBMK.mccskin", isDirectory: true)
 
         let data = try Data(contentsOf: folder.appendingPathComponent("skin.json"))
         let raw = try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])

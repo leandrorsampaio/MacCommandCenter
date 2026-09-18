@@ -1,14 +1,14 @@
 {
   "format": 1,
   "id": "reactor-control",
-  "name": "Reactor Control",
+  "name": "RBMK Mac Control Panel",
   "author": "Mac Command Center",
   "notes": "Soviet console: sage panel, latching bakelite keys, amber counter, needle gauge.",
   "layout": [
     {
       "slot": "nameplate",
-      "text": "Пульт управления",
-      "subtitle": "Control panel · БЩУ-1"
+      "text": "РБМК · Пульт управления",
+      "subtitle": "RBMK Mac Control Panel · БЩУ-1"
     },
     {
       "slot": "annunciator"
@@ -39,7 +39,11 @@
       "slot": "spacer"
     },
     {
-      "slot": "controls"
+      "slot": "controls",
+      "onTop": "Поверх всех",
+      "onTopNote": "always on top",
+      "close": "Закрыть",
+      "closeNote": "close panel"
     }
   ],
   "chrome": {
@@ -92,7 +96,8 @@
     "tracking": 1.2,
     "keyRelief": 7,
     "indicatorDelay": 0.3,
-    "keyHeight": 54
+    "keyHeight": 54,
+    "legendScale": 1.25
   },
   "fonts": {
     "display": {

@@ -6,6 +6,23 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **The Reactor Control skin is now "RBMK Mac Control Panel"**, nameplate included
+  (`РБМК · Пульт управления` over `RBMK Mac Control Panel · БЩУ-1`), and its folder is
+  `Skins/RBMK.mccskin`. The skin id is unchanged, so an existing selection survives.
+- **Instruments speak English, keys carry both languages.** An annunciator cell, a lamp
+  caption and the mode readout take the English half of a `"Русский · English"` label;
+  only the keys and the nameplate stay bilingual. One panel mixing two languages across
+  its instruments read as a mistake rather than a flourish.
+- **A skin supplies the words for the controls row**: `"slot": "controls"` takes
+  `onTop`, `onTopNote`, `close` and `closeNote`, so "Закрыть" lives in the skin instead of
+  being hardcoded in an otherwise language-neutral app.
+- **`legendScale`**, a metric that sizes every key face, lamp caption and annunciator cell
+  together. The RBMK panel sets `1.25`.
+- Keys in a row share a height, and the lamps sit directly on the chassis — the recessed
+  strip behind them was the only part of the panel with a background of its own.
+
 ### Fixed
 
 Following two external reviews (`review_claude_fable_5_1.md`, `review_gemini_3_8_flash.md`):

@@ -146,6 +146,7 @@ enum SkinAuthoring {
         | `tracking` | 0.6 | Letter spacing on display type |
         | `keyRelief` | 5 | How far a relief key stands proud, and sinks when pressed |
         | `keyHeight` | 62 | Minimum height of a relief key. A key is a block, not a row |
+        | `legendScale` | 1 | Multiplier on legend type: key faces, lamps, annunciator |
         | `indicatorDelay` | 0 | Seconds between a key latching and the lamps reporting it |
 
         `indicatorDelay` is worth a word. At `0` the panel responds instantly. Give it
@@ -234,7 +235,7 @@ enum SkinAuthoring {
         | `gauge` | `source`: `battery`. Optional `width` |
         | `commands` | The buttons. `style`: `tile` or `key`. `columns`: 0 means one row |
         | `lamps` | An indicator lamp per command, plus battery |
-        | `controls` | Float-on-top and close, as panel keys |
+        | `controls` | Float-on-top and close, as panel keys. Takes `onTop`, `onTopNote`, `close`, `closeNote`; English by default |
         | `spacer` | Pushes everything after it to the bottom |
         | `row` | Lays its `children` out side by side |
 

@@ -32,12 +32,31 @@ public indirect enum SkinSlot: Sendable, Equatable {
     case commands(style: CommandStyle, columns: Int)
     /// A row of indicator lamps mirroring command state.
     case lamps
-    /// Float-on-top and close, as panel controls rather than titlebar boxes.
-    case controls
+    /// Float-on-top and close, as panel controls rather than titlebar boxes. Each takes
+    /// an optional label and sub-label so a skin can word them in its own language.
+    case controls(labels: ControlLabels)
     /// Pushes everything after it to the bottom.
     case spacer
     /// Lays its children out side by side.
     case row([SkinSlot])
+}
+
+/// Wording for the panel controls. Anything left out falls back to English.
+public struct ControlLabels: Sendable, Equatable {
+    public var onTop: String?
+    public var onTopNote: String?
+    public var close: String?
+    public var closeNote: String?
+
+    public init(
+        onTop: String? = nil, onTopNote: String? = nil,
+        close: String? = nil, closeNote: String? = nil
+    ) {
+        self.onTop = onTop
+        self.onTopNote = onTopNote
+        self.close = close
+        self.closeNote = closeNote
+    }
 }
 
 public enum ReadoutStyle: String, Sendable, Codable {
@@ -87,7 +106,14 @@ extension SkinSlot {
             )
         case "annunciator": self = .annunciator
         case "lamps": self = .lamps
-        case "controls": self = .controls
+        case "controls":
+            self = .controls(
+                labels: ControlLabels(
+                    onTop: entry["onTop"] as? String,
+                    onTopNote: entry["onTopNote"] as? String,
+                    close: entry["close"] as? String,
+                    closeNote: entry["closeNote"] as? String
+                ))
         case "spacer": self = .spacer
 
         case "readout":

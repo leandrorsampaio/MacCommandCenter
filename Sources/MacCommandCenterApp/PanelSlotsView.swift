@@ -85,8 +85,8 @@ struct PanelSlotsView: View {
         case .lamps:
             SkinLampRow(lamps: lamps)
 
-        case .controls:
-            controls
+        case .controls(let labels):
+            controls(labels)
 
         case .spacer:
             Spacer(minLength: 0)
@@ -126,7 +126,7 @@ struct PanelSlotsView: View {
                     let slice = Array(entries[start..<min(start + perRow, entries.count)])
                     HStack(spacing: skin.metrics.spacing) {
                         ForEach(slice) { entry in
-                            keyButton(entry)
+                            keyButton(entry).frame(maxHeight: .infinity)
                         }
                         // Hold the empty columns open: a lone key in the final row should
                         // stay a key rather than stretching into a bar.
@@ -134,6 +134,7 @@ struct PanelSlotsView: View {
                             Color.clear.frame(maxWidth: .infinity)
                         }
                     }
+                    .fixedSize(horizontal: false, vertical: true)
                 }
             }
         }
@@ -171,17 +172,7 @@ struct PanelSlotsView: View {
         return Button {
             press(entry)
         } label: {
-            VStack(spacing: 4) {
-                Text(skin.label(entry.option.title))
-                    .font(skin.displayFont)
-                if !entry.option.subtitle.isEmpty {
-                    Text(entry.option.subtitle)
-                        .font(skin.bodyFont)
-                        .opacity(0.62)
-                        .lineLimit(2)
-                        .multilineTextAlignment(.center)
-                }
-            }
+            keyLabel(entry.option.title, note: entry.option.subtitle)
         }
         .buttonStyle(SkinKeyButtonStyle(isLatched: isLatched, role: keyRole(entry.option.role)))
         .disabled(!entry.option.isEnabled)
@@ -239,36 +230,58 @@ struct PanelSlotsView: View {
 
     // MARK: - Controls
 
-    private var controls: some View {
+    private func controls(_ labels: ControlLabels) -> some View {
         HStack(spacing: skin.metrics.spacing) {
             Button {
                 if skin.chrome.keyClick { KeyClick.play(file: skin.keySoundURL) }
                 model.floatsOnTop.toggle()
             } label: {
-                Text(skin.label("Always on top")).font(skin.displayFont)
+                keyLabel(labels.onTop ?? "Always on top", note: labels.onTopNote)
             }
             .buttonStyle(SkinKeyButtonStyle(isLatched: model.floatsOnTop))
+            .accessibilityAddTraits(model.floatsOnTop ? [.isSelected] : [])
+            .frame(maxHeight: .infinity)
 
             Button {
                 if skin.chrome.keyClick { KeyClick.play(file: skin.keySoundURL, pitch: 420) }
                 model.requestClose?()
             } label: {
-                VStack(spacing: 3) {
-                    Text(skin.label("Закрыть")).font(skin.displayFont)
-                    Text("close panel").font(skin.bodyFont).opacity(0.8)
-                }
+                keyLabel(labels.close ?? "Close", note: labels.closeNote ?? "close panel")
             }
             .buttonStyle(SkinKeyButtonStyle())
+            .frame(maxHeight: .infinity)
+        }
+        .fixedSize(horizontal: false, vertical: true)
+    }
+
+    /// A key legend with its note underneath, the shape every key on the panel uses.
+    private func keyLabel(_ title: String, note: String?) -> some View {
+        VStack(spacing: 4) {
+            Text(skin.label(title))
+                .font(skin.legendTitleFont)
+            if let note, !note.isEmpty {
+                Text(note)
+                    .font(skin.legendNoteFont)
+                    .opacity(0.62)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+            }
         }
     }
 
     // MARK: - Derived content
 
-    /// Legends are short by nature. A bilingual title like "Режим сна · Sleep mode" is
-    /// a caption, not a legend, so only the part before the separator is used.
-    private func legend(_ title: String) -> String {
-        let head = title.split(separator: "·", maxSplits: 1).first.map(String.init) ?? title
-        return head.trimmingCharacters(in: .whitespaces)
+    /// The instruments are labelled in English even when the keys are not: a readout,
+    /// an annunciator cell and a lamp are all short legends, and mixing languages across
+    /// one panel reads as a mistake rather than a flourish.
+    ///
+    /// A bilingual string is written "Режим сна · Sleep mode", so the English is the part
+    /// after the separator. A single-language string is used as it stands.
+    private func legend(_ text: String) -> String {
+        let parts = text.split(separator: "·", maxSplits: 1).map {
+            $0.trimmingCharacters(in: .whitespaces)
+        }
+        return parts.count > 1 ? parts[1] : (parts.first ?? text)
     }
 
     private var annunciatorCells: [SkinAnnunciator.Cell] {
@@ -317,7 +330,14 @@ struct PanelSlotsView: View {
     private var modeLine: String {
         guard let active = model.center.activeCommands.first else { return "Sleep allowed" }
         let state = model.center.state(for: active.id)
-        return active.options.first { $0.id == state.activeOptionID }?.title ?? active.title
+        guard let option = active.options.first(where: { $0.id == state.activeOptionID }) else {
+            return legend(active.title)
+        }
+        // The subtitle is the English explanation; its first clause is the mode.
+        let note =
+            option.subtitle.split(separator: "·", maxSplits: 1).first
+            .map { $0.trimmingCharacters(in: .whitespaces) } ?? ""
+        return note.isEmpty ? legend(option.title) : note
     }
 
     private func shortcutOffset(for descriptor: CommandDescriptor) -> Int {

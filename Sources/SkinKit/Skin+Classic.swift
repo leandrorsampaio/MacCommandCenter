@@ -63,6 +63,7 @@ public extension Skin {
             tracking: 0.6,
             keyRelief: 5,
             keyHeight: 62,
+            legendScale: 1,
             indicatorDelay: 0
         ),
         fonts: SkinFonts(

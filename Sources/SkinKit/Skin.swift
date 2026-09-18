@@ -176,6 +176,9 @@ public struct SkinMetrics: Sendable, Equatable {
     public var keyRelief: Double
     /// Minimum height of a relief key. A key is a block, not a list row.
     public var keyHeight: Double
+    /// Multiplier on legend type — key faces, lamp captions and annunciator cells — so
+    /// the things you read at a glance can be larger than the panel's fine print.
+    public var legendScale: Double
     /// Delay between a key latching and the lamps reporting it, in seconds. A console
     /// with `0` responds instantly; a slower one feels like a relay closing elsewhere.
     public var indicatorDelay: Double
@@ -183,7 +186,7 @@ public struct SkinMetrics: Sendable, Equatable {
     public static let keys = [
         "width", "padding", "spacing", "bevel", "cornerRadius", "tileHeight",
         "titlebarHeight", "readoutPadding", "ledSize", "glowRadius", "tracking",
-        "keyRelief", "keyHeight", "indicatorDelay",
+        "keyRelief", "keyHeight", "legendScale", "indicatorDelay",
     ]
 
     public subscript(key: String) -> Double? {
@@ -201,6 +204,7 @@ public struct SkinMetrics: Sendable, Equatable {
         case "tracking": return tracking
         case "keyRelief": return keyRelief
         case "keyHeight": return keyHeight
+        case "legendScale": return legendScale
         case "indicatorDelay": return indicatorDelay
         default: return nil
         }
@@ -222,6 +226,7 @@ public struct SkinMetrics: Sendable, Equatable {
             case "tracking": tracking = max(-2, min(6, value))
             case "keyRelief": keyRelief = max(0, min(14, value))
             case "keyHeight": keyHeight = max(28, min(200, value))
+            case "legendScale": legendScale = max(0.5, min(3, value))
             case "indicatorDelay": indicatorDelay = max(0, min(2, value))
             default: break
             }
@@ -268,6 +273,14 @@ public struct SkinFontSpec: Sendable, Equatable {
             return .custom(family, fixedSize: size).weight(weight)
         }
         return .system(size: size, weight: weight, design: monospaced ? .monospaced : .default)
+    }
+
+    /// A copy at a different size, used where one role needs more presence than the
+    /// rest of the panel.
+    public func scaled(by factor: Double) -> SkinFontSpec {
+        var copy = self
+        copy.size = max(5, min(72, size * factor))
+        return copy
     }
 
     /// True when the skin's requested family is actually available.

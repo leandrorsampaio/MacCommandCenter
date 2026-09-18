@@ -174,7 +174,7 @@ struct SkinLayoutTests {
         #expect(parsed.rows.count == 5)
         #expect(parsed.rows[0] == .nameplate(title: "Console", subtitle: nil))
         #expect(parsed.rows[2] == .commands(style: .key, columns: 2))
-        #expect(parsed.rows[4] == .controls)
+        #expect(parsed.rows[4] == .controls(labels: ControlLabels()))
 
         guard case .row(let children) = parsed.rows[1] else {
             Issue.record("expected a row")
