@@ -9,6 +9,29 @@ import Foundation
 public enum KeyClick {
 
     private static var players: [Double: AVAudioPlayer] = [:]
+    private static var filePlayers: [URL: AVAudioPlayer] = [:]
+
+    /// Plays a sound a skin shipped. Falls back to the synthesised click when the file
+    /// cannot be read, so a bad path costs the skin its click and nothing more.
+    public static func play(file url: URL?, pitch: Double = 620) {
+        guard let url else {
+            play(pitch: pitch)
+            return
+        }
+        if let player = filePlayers[url] {
+            player.currentTime = 0
+            player.play()
+            return
+        }
+        guard let player = try? AVAudioPlayer(contentsOf: url) else {
+            play(pitch: pitch)
+            return
+        }
+        player.volume = 0.5
+        player.prepareToPlay()
+        filePlayers[url] = player
+        player.play()
+    }
 
     /// `pitch` in hertz. A key is bright and short; something heavier wants a lower one.
     public static func play(pitch: Double = 620, seconds: Double = 0.045) {

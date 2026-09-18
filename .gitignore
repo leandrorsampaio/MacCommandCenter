@@ -3,3 +3,9 @@ build/
 .DS_Store
 *.xcuserstate
 .swiftpm/
+
+# Sounds a skin author drops in locally; licences vary, so they are not committed.
+Skins/**/sounds/*.wav
+Skins/**/sounds/*.mp3
+Skins/**/sounds/*.aiff
+Skins/**/sounds/*.m4a

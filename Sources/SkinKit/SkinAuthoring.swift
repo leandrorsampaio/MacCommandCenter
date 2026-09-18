@@ -158,6 +158,14 @@ enum SkinAuthoring {
         Three roles: `display` (labels and button titles), `readout` (the LCD) and `body`
         (descriptions). Each takes `family`, `size`, `weight` and `monospaced`.
 
+        `family` takes one name or a stack, and the first one installed wins:
+
+            "display": { "family": ["Bahnschrift", "DIN Condensed", "PT Sans Narrow"] }
+
+        Useful because a font you have is not a font everyone has — Bahnschrift ships with
+        Microsoft Office, not with macOS, so a skin that wants it should name what to use
+        instead. To guarantee a face, ship the file (see below).
+
         The defaults are Geneva and Monaco because both ship with macOS, so the app never
         depends on a download. To use a font the user does not have, **ship it with the
         skin**:
@@ -182,6 +190,7 @@ enum SkinAuthoring {
         | `scanlines` | true | CRT lines over the LCD |
         | `visualizer` | true | The spectrum bars in the readout |
         | `uppercase` | true | Force labels to caps |
+        | `flicker` | false | Analogue jitter on gauge needles |
 
         ## Chrome
 
@@ -190,6 +199,14 @@ enum SkinAuthoring {
         | `screws` | false | Screws in the four corners |
         | `keyClick` | false | A click when a key is pressed |
         | `texture` | false | Fine vertical grain over the chassis |
+
+        `keyClick` can also name a sound file inside the skin folder:
+
+            "chrome": { "keyClick": true, "keySound": "sounds/click.wav" }
+
+        Any format AVAudioPlayer reads works. The path cannot escape the skin folder, and a
+        missing file falls back to the synthesised click. Keep it under about 150ms or it
+        lags behind the press.
 
         ## Layout
 

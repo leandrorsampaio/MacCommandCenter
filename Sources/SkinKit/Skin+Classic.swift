@@ -70,8 +70,10 @@ public extension Skin {
             readout: SkinFontSpec(family: "Monaco", size: 11, monospaced: true),
             body: SkinFontSpec(family: "Geneva", size: 9.5)
         ),
-        effects: SkinEffects(glow: true, scanlines: true, visualizer: true, uppercase: true),
+        effects: SkinEffects(
+            glow: true, scanlines: true, visualizer: true, uppercase: true, flicker: false),
         chrome: SkinChrome(screws: false, keyClick: false, texture: false),
+        keySoundURL: nil,
         layout: SkinLayout.stack
     )
 }

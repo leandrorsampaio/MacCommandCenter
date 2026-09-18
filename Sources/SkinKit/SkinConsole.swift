@@ -101,7 +101,7 @@ public struct SkinModule<Content: View>: View {
             }
 
             content
-                .padding(9)
+                .padding(12)
                 .frame(maxWidth: .infinity)
         }
         .background(
@@ -151,7 +151,7 @@ public struct SkinAnnunciator: View {
     }
 
     public var body: some View {
-        HStack(spacing: 5) {
+        HStack(spacing: 7) {
             ForEach(cells) { cell in
                 Text(skin.label(cell.label))
                     .font(skin.bodyFont)
@@ -160,10 +160,10 @@ public struct SkinAnnunciator: View {
                     .multilineTextAlignment(.center)
                     .minimumScaleFactor(0.55)
                     .fixedSize(horizontal: false, vertical: true)
-                    .padding(.vertical, 5)
-                    .padding(.horizontal, 3)
+                    .padding(.vertical, 7)
+                    .padding(.horizontal, 4)
                     // Equal widths whatever the legends say, so the row reads as a strip.
-                    .frame(maxWidth: .infinity, minHeight: 30)
+                    .frame(maxWidth: .infinity, minHeight: 34)
                     .foregroundStyle(
                         cell.isLit ? skin.colors.readoutBackground.color : skin.colors.textDim.color
                     )
@@ -216,7 +216,7 @@ public struct SkinNixie: View {
     }
 
     public var body: some View {
-        VStack(spacing: 7) {
+        VStack(spacing: 9) {
             glass {
                 Text(skin.label(caption))
                     .font(skin.bodyFont)
@@ -288,14 +288,49 @@ public struct SkinGauge: View {
         self.caption = caption
     }
 
-    private var angle: Double { -150 + value * 120 }
+    private func angle(jitter: Double) -> Double {
+        -150 + min(1, max(0, value + jitter)) * 120
+    }
+
+    /// Analogue wander, derived from the tick rather than stored.
+    ///
+    /// `@State` would be the obvious way to do this, but these views are type-erased to
+    /// break a recursive layout, and erased state does not reliably survive a re-render —
+    /// the needle simply sat still. A pure function of the tick cannot be lost.
+    ///
+    /// Roughly seven ticks in ten the value moves, by up to five points of full scale;
+    /// the rest of the time it holds where it was, which is what makes it read as a
+    /// needle rather than an animation.
+    static func jitter(tick: Int) -> Double {
+        var moment = tick
+        var steps = 0
+        while steps < 5 && scramble(moment) % 10 >= 7 {
+            moment -= 1
+            steps += 1
+        }
+        return (Double(scramble(moment) % 1000) / 1000 - 0.5) * 0.10
+    }
+
+    /// FNV-1a over the tick: cheap, and stable for a given tick.
+    private static func scramble(_ value: Int) -> Int {
+        var hash: UInt64 = 0xcbf2_9ce4_8422_2325
+        for byte in withUnsafeBytes(of: Int64(value).littleEndian, Array.init) {
+            hash ^= UInt64(byte)
+            hash &*= 0x1000_0000_01b3
+        }
+        return Int(hash % 100_000)
+    }
 
     public var body: some View {
         VStack(spacing: 6) {
-            Color.clear
-                .aspectRatio(200.0 / 118.0, contentMode: .fit)
-                .overlay { face }
-                .overlay { needle }
+            if skin.effects.flicker {
+                TimelineView(.periodic(from: .now, by: 0.5)) { context in
+                    let tick = Int(context.date.timeIntervalSinceReferenceDate * 2)
+                    dial(angle: angle(jitter: Self.jitter(tick: tick)))
+                }
+            } else {
+                dial(angle: angle(jitter: 0))
+            }
 
             if !caption.isEmpty {
                 Text(skin.label(caption))
@@ -304,6 +339,13 @@ public struct SkinGauge: View {
                     .foregroundStyle(skin.colors.text.color)
             }
         }
+    }
+
+    private func dial(angle: Double) -> some View {
+        Color.clear
+            .aspectRatio(200.0 / 118.0, contentMode: .fit)
+            .overlay { face }
+            .overlay { needle(angle: angle) }
     }
 
     private var face: some View {
@@ -357,7 +399,7 @@ public struct SkinGauge: View {
             RoundedRectangle(cornerRadius: skin.metrics.cornerRadius + 4, style: .continuous))
     }
 
-    private var needle: some View {
+    private func needle(angle: Double) -> some View {
         GeometryReader { proxy in
             let centre = CGPoint(x: proxy.size.width / 2, y: proxy.size.height * 0.87)
             let length = min(proxy.size.width * 0.42, proxy.size.height * 0.78) * 0.95
@@ -405,7 +447,7 @@ public struct SkinLampRow: View {
     }
 
     public var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 16) {
             ForEach(lamps) { lamp in
                 VStack(spacing: 5) {
                     dome(isLit: lamp.isLit)
@@ -420,8 +462,8 @@ public struct SkinLampRow: View {
                 .frame(maxWidth: .infinity)
             }
         }
-        .padding(.vertical, 7)
-        .padding(.horizontal, 10)
+        .padding(.vertical, 12)
+        .padding(.horizontal, 14)
         .background(.black.opacity(0.10))
         .overlay(alignment: .top) { Rectangle().fill(.white.opacity(0.18)).frame(height: 1) }
         .clipShape(RoundedRectangle(cornerRadius: skin.metrics.cornerRadius, style: .continuous))

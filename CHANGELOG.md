@@ -94,6 +94,25 @@ Following two external reviews (`review_claude_fable_5_1.md`, `review_gemini_3_8
 
 ### Added
 
+- **Needle flicker** (`"flicker": true`), so an analogue gauge wanders the way a real
+  moving coil does: it moves on roughly seven ticks in ten, by up to five points of full
+  scale, and holds the rest of the time.
+- **Font stacks.** `"family"` takes a list and the first installed face wins, which is how
+  a skin can ask for Bahnschrift — which ships with Office, not macOS — and say what to
+  use instead.
+- **Skins can ship a click sound**: `"chrome": { "keySound": "sounds/click.wav" }`,
+  resolved inside the skin folder like a font, falling back to the synthesised click.
+
+### Fixed
+
+- **A string in `chrome` broke the whole skin.** `chrome` decoded as `[String: Bool]`, so
+  adding `keySound` failed the entire manifest; the catalog then fell back to the first
+  available skin *and persisted that*, which looked like the skin quietly doing nothing.
+  Chrome is a typed struct now, and a new test loads every bundled skin through the real
+  decoder so a broken manifest fails CI rather than the user's panel.
+
+### Added
+
 - **Button roles.** A config can mark an option `danger` or `caution`; the skin decides
   what that looks like via `keyDanger` and `keyCaution`. Meaning stays in the config,
   colour stays in the skin — so a skin is free to render danger as green phosphor if that

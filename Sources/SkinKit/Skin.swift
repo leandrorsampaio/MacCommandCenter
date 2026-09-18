@@ -233,8 +233,15 @@ public struct SkinMetrics: Sendable, Equatable {
 
 public struct SkinFontSpec: Sendable, Equatable {
 
-    /// A font family installed on the system, or one registered from `file`.
-    public var family: String?
+    /// Families in preference order, the way a CSS font stack works. The first one
+    /// actually installed wins, so a skin can ask for a font not everyone has and name a
+    /// fallback that everyone does.
+    public var families: [String]
+
+    /// The first family that resolves on this machine.
+    public var family: String? {
+        families.first { FontAvailability.hasFamily($0) } ?? families.first
+    }
     /// A font file inside the skin folder, relative to it. Registered at load time.
     public var file: String?
     public var size: Double
@@ -245,7 +252,7 @@ public struct SkinFontSpec: Sendable, Equatable {
         family: String? = nil, file: String? = nil, size: Double,
         weight: Font.Weight = .regular, monospaced: Bool = false
     ) {
-        self.family = family
+        self.families = family.map { [$0] } ?? []
         self.file = file
         self.size = size
         self.weight = weight
@@ -294,15 +301,10 @@ public struct SkinChrome: Sendable, Equatable {
 
     public static let keys = ["screws", "keyClick", "texture"]
 
-    mutating func apply(_ overrides: [String: Bool]) {
-        for (key, value) in overrides {
-            switch key {
-            case "screws": screws = value
-            case "keyClick": keyClick = value
-            case "texture": texture = value
-            default: break
-            }
-        }
+    mutating func apply(_ entry: SkinManifest.ChromeEntry) {
+        if let value = entry.screws { screws = value }
+        if let value = entry.keyClick { keyClick = value }
+        if let value = entry.texture { texture = value }
     }
 }
 
@@ -311,8 +313,10 @@ public struct SkinEffects: Sendable, Equatable {
     public var scanlines: Bool
     public var visualizer: Bool
     public var uppercase: Bool
+    /// Analogue jitter on gauge needles. A real moving coil never sits perfectly still.
+    public var flicker: Bool
 
-    public static let keys = ["glow", "scanlines", "visualizer", "uppercase"]
+    public static let keys = ["glow", "scanlines", "visualizer", "uppercase", "flicker"]
 
     mutating func apply(_ overrides: [String: Bool]) {
         for (key, value) in overrides {
@@ -321,6 +325,7 @@ public struct SkinEffects: Sendable, Equatable {
             case "scanlines": scanlines = value
             case "visualizer": visualizer = value
             case "uppercase": uppercase = value
+            case "flicker": flicker = value
             default: break
             }
         }
@@ -345,6 +350,8 @@ public struct Skin: Sendable, Equatable, Identifiable {
     public var fonts: SkinFonts
     public var effects: SkinEffects
     public var chrome: SkinChrome
+    /// A click sound shipped inside the skin folder, if it named one.
+    public var keySoundURL: URL?
     /// How the panel is composed. Defaults to the original stack, so a skin written
     /// before layouts existed renders exactly as it always did.
     public var layout: SkinLayout
@@ -361,8 +368,31 @@ public struct Skin: Sendable, Equatable, Identifiable {
 /// what it names and inherits the rest, so skins never break when new tokens are added.
 struct SkinManifest: Decodable {
 
+    /// One name or several, so a manifest can write either.
+    struct FontFamilies: Decodable {
+        let names: [String]
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.singleValueContainer()
+            if let single = try? container.decode(String.self) {
+                names = [single]
+            } else {
+                names = (try? container.decode([String].self)) ?? []
+            }
+        }
+    }
+
+    struct ChromeEntry: Decodable {
+        var screws: Bool?
+        var keyClick: Bool?
+        var texture: Bool?
+        /// A sound file inside the skin folder. Resolved by the catalog, not here.
+        var keySound: String?
+    }
+
     struct FontEntry: Decodable {
-        var family: String?
+        /// Accepts a single name or a stack: "PT Sans" or ["Bahnschrift", "DIN Condensed"].
+        var family: FontFamilies?
         var file: String?
         var size: Double?
         var weight: String?
@@ -377,7 +407,7 @@ struct SkinManifest: Decodable {
     var colors: [String: String]?
     var metrics: [String: Double]?
     var effects: [String: Bool]?
-    var chrome: [String: Bool]?
+    var chrome: ChromeEntry?
     var fonts: [String: FontEntry]?
 }
 
@@ -413,7 +443,7 @@ extension Skin {
         if let overrides = manifest.colors { colors.apply(overrides) }
         if let overrides = manifest.metrics { metrics.apply(overrides) }
         if let overrides = manifest.effects { effects.apply(overrides) }
-        if let overrides = manifest.chrome { self.chrome.apply(overrides) }
+        if let overrides = manifest.chrome { chrome.apply(overrides) }
 
         if let fontOverrides = manifest.fonts {
             apply(fontOverrides["display"], to: &fonts.display, folderURL: folderURL)
@@ -434,11 +464,11 @@ extension Skin {
         if let file = entry.file, let folderURL {
             spec.file = file
             if let registered = FontRegistrar.register(fileNamed: file, in: folderURL) {
-                spec.family = registered
+                spec.families = [registered]
                 return
             }
         }
-        if let family = entry.family { spec.family = family }
+        if let family = entry.family, !family.names.isEmpty { spec.families = family.names }
     }
 }
 

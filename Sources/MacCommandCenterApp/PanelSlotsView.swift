@@ -203,7 +203,7 @@ struct PanelSlotsView: View {
 
     /// The key falls the moment it is struck; the command follows after the skin's delay.
     private func press(_ entry: KeyEntry) {
-        if skin.chrome.keyClick { KeyClick.play() }
+        if skin.chrome.keyClick { KeyClick.play(file: skin.keySoundURL) }
 
         let wasLatched = latched[entry.command] == entry.option.id
         latched[entry.command] = wasLatched ? nil : entry.option.id
@@ -242,7 +242,7 @@ struct PanelSlotsView: View {
     private var controls: some View {
         HStack(spacing: skin.metrics.spacing) {
             Button {
-                if skin.chrome.keyClick { KeyClick.play() }
+                if skin.chrome.keyClick { KeyClick.play(file: skin.keySoundURL) }
                 model.floatsOnTop.toggle()
             } label: {
                 Text(skin.label("Always on top")).font(skin.displayFont)
@@ -250,7 +250,7 @@ struct PanelSlotsView: View {
             .buttonStyle(SkinKeyButtonStyle(isLatched: model.floatsOnTop))
 
             Button {
-                if skin.chrome.keyClick { KeyClick.play(pitch: 420) }
+                if skin.chrome.keyClick { KeyClick.play(file: skin.keySoundURL, pitch: 420) }
                 model.requestClose?()
             } label: {
                 VStack(spacing: 3) {

@@ -45,7 +45,8 @@
   "chrome": {
     "screws": true,
     "keyClick": true,
-    "texture": true
+    "texture": true,
+    "keySound": "sounds/click.wav"
   },
   "colors": {
     "panel": "#5C6657",
@@ -80,12 +81,12 @@
   },
   "metrics": {
     "width": 480,
-    "padding": 18,
-    "spacing": 8,
+    "padding": 20,
+    "spacing": 14,
     "bevel": 3,
     "cornerRadius": 4,
     "titlebarHeight": 0,
-    "readoutPadding": 7,
+    "readoutPadding": 9,
     "ledSize": 9,
     "glowRadius": 9,
     "tracking": 1.2,
@@ -95,8 +96,12 @@
   },
   "fonts": {
     "display": {
-      "family": "PT Sans",
-      "size": 12,
+      "family": [
+        "Bahnschrift",
+        "DIN Condensed",
+        "PT Sans Narrow"
+      ],
+      "size": 14,
       "weight": "bold"
     },
     "readout": {
@@ -105,14 +110,19 @@
       "monospaced": true
     },
     "body": {
-      "family": "PT Sans",
-      "size": 9
+      "family": [
+        "Bahnschrift",
+        "DIN Alternate",
+        "PT Sans"
+      ],
+      "size": 10
     }
   },
   "effects": {
     "glow": true,
     "scanlines": false,
     "visualizer": false,
-    "uppercase": true
+    "uppercase": true,
+    "flicker": true
   }
 }

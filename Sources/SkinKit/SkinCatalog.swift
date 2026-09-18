@@ -139,10 +139,24 @@ public final class SkinCatalog {
 
             // `layout` is a heterogeneous tree, which Codable cannot express cleanly, so
             // it is read from the raw object alongside the typed manifest.
-            if let raw = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                let layout = SkinLayout(json: raw["layout"])
-            {
-                skin.layout = layout
+            if let raw = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                if let layout = SkinLayout(json: raw["layout"]) {
+                    skin.layout = layout
+                }
+                // A named sound is resolved like a font: relative to the skin folder, and
+                // never allowed to point outside it.
+                if let chrome = raw["chrome"] as? [String: Any],
+                    let name = chrome["keySound"] as? String,
+                    let folder = folder,
+                    !name.contains(".."), !name.hasPrefix("/")
+                {
+                    let candidate = folder.appendingPathComponent(name)
+                    if candidate.path.hasPrefix(folder.path),
+                        FileManager.default.fileExists(atPath: candidate.path)
+                    {
+                        skin.keySoundURL = candidate
+                    }
+                }
             }
             return .success(skin)
         } catch let error as DecodingError {
