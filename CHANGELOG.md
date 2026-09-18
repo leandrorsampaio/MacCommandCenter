@@ -94,6 +94,13 @@ Following two external reviews (`review_claude_fable_5_1.md`, `review_gemini_3_8
 
 ### Added
 
+- Reactor Control ships a real key click, derived from Universfield's "Click Button" on
+  Pixabay under a licence that permits redistribution in a product. Trimmed from 496 ms to
+  158 ms and summed to mono: the original had 21 ms of silence before the attack, which a
+  key press reads as lag.
+
+### Added
+
 - **Needle flicker** (`"flicker": true`), so an analogue gauge wanders the way a real
   moving coil does: it moves on roughly seven ticks in ten, by up to five points of full
   scale, and holds the rest of the time.

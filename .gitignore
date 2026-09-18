@@ -4,8 +4,9 @@ build/
 *.xcuserstate
 .swiftpm/
 
-# Sounds a skin author drops in locally; licences vary, so they are not committed.
-Skins/**/sounds/*.wav
+# Sounds a skin author drops in locally; licences vary, so they are not committed
+# unless their terms allow redistribution. See Skins/*/sounds/README.md.
 Skins/**/sounds/*.mp3
 Skins/**/sounds/*.aiff
 Skins/**/sounds/*.m4a
+!Skins/Chernobyl.mccskin/sounds/click.wav

@@ -1,3 +1,4 @@
+import AVFoundation
 import Foundation
 import Testing
 
@@ -91,5 +92,33 @@ struct NeedleJitterTests {
 
         #expect(holds > 40, "only \(holds) holds in 500 ticks — too jumpy")
         #expect(holds < 300, "\(holds) holds in 500 ticks — barely moves")
+    }
+}
+
+@MainActor
+struct BundledSoundTests {
+
+    /// A skin naming a sound it does not ship falls back silently, which reads as "the
+    /// click stopped working". For a skin we ship, that should fail here instead.
+    @Test func reactorControlShipsTheClickItNames() throws {
+        let folder = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("Skins/Chernobyl.mccskin", isDirectory: true)
+
+        let data = try Data(contentsOf: folder.appendingPathComponent("skin.json"))
+        let raw = try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let chrome = try #require(raw["chrome"] as? [String: Any])
+        let name = try #require(chrome["keySound"] as? String)
+
+        let sound = folder.appendingPathComponent(name)
+        #expect(FileManager.default.fileExists(atPath: sound.path), "missing \(name)")
+
+        // A click that starts late is felt as lag, however good it sounds.
+        let file = try AVAudioFile(forReading: sound)
+        let seconds = Double(file.length) / file.processingFormat.sampleRate
+        #expect(seconds > 0.01, "sound decoded as \(seconds)s — the file is not playable")
+        #expect(seconds < 0.30, "\(seconds)s is too long for a key click")
     }
 }
