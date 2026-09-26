@@ -8,7 +8,8 @@ import SwiftUI
 ///
 /// The desk is one fixed drawing, so the window's content is locked to its aspect ratio and
 /// never narrower than 1280 points; full screen on a second display is its intended home.
-/// Closing the window powers the console down: nothing of it runs while it is not shown.
+/// Closing the window closes only the window: the console goes on counting behind it,
+/// unless Settings says otherwise. See `ConsoleHost`.
 @MainActor
 final class ConsoleWindowController: NSObject, NSWindowDelegate {
 
@@ -36,8 +37,8 @@ final class ConsoleWindowController: NSObject, NSWindowDelegate {
         }
 
         PK4Type.register()
-        model.openConsole()
-        guard let console = model.console else { return }
+        model.consoleHost.windowDidOpen()
+        guard let console = model.consoleHost.console else { return }
         let sound = PK4Sound()
         self.sound = sound
         model.applyConsoleSoundSettings(to: sound)
@@ -57,7 +58,7 @@ final class ConsoleWindowController: NSObject, NSWindowDelegate {
         if ProcessInfo.processInfo.environment["PK4_TRACE"] == "1" {
             trace = ConsoleTrace(folder: console.directory)
         }
-        follow(console)
+        follow()
 
         let root = ConsoleRoot(model: model, sound: sound, view: view, trace: trace)
         let window = NSWindow(
@@ -84,6 +85,9 @@ final class ConsoleWindowController: NSObject, NSWindowDelegate {
         self.window = window
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
+        // Nothing is focused until Tab is pressed: a ring on PRT the moment the window
+        // opens looks like a fault.
+        window.makeFirstResponder(nil)
     }
 
     func close() {
@@ -91,16 +95,19 @@ final class ConsoleWindowController: NSObject, NSWindowDelegate {
     }
 
     /// The relays, the buzzer and the log window follow the model, not the view: a hidden
-    /// console still sounds its alarms.
-    private func follow(_ console: PK4Console) {
+    /// console still sounds its alarms. Whichever console the host holds — switching to
+    /// the scripted day swaps it.
+    private func follow() {
         withObservationTracking {
-            _ = console.model.snapshot
-        } onChange: { [weak self, weak console] in
+            _ = model.consoleHost.console?.model.snapshot
+        } onChange: { [weak self] in
             Task { @MainActor in
-                guard let self, let console, self.model.console === console else { return }
-                self.director?.hear(console.model.snapshot)
+                guard let self, self.window != nil else { return }
+                if let console = self.model.consoleHost.console {
+                    self.director?.hear(console.model.snapshot)
+                }
                 self.trace?.snapshotChanged()
-                self.follow(console)
+                self.follow()
             }
         }
     }
@@ -118,8 +125,8 @@ final class ConsoleWindowController: NSObject, NSWindowDelegate {
         director = nil
         trace = nil
         log.close()
-        model.closeConsole()
         window = nil
+        model.consoleHost.windowDidClose()
     }
 }
 
@@ -172,7 +179,7 @@ private struct ConsoleRoot: View {
 
     var body: some View {
         let _ = trace?.drew()
-        if let console = model.console, view.visible {
+        if let console = model.consoleHost.console, view.visible {
             PK4ConsoleScreen(
                 snapshot: console.model.snapshot,
                 send: { console.send($0) },
@@ -199,7 +206,7 @@ final class ConsoleLogWindowController: NSObject, NSWindowDelegate {
     }
 
     func show() {
-        text.value = model.console?.log.readText(lastCharacters: 200_000) ?? ""
+        text.value = model.consoleHost.console?.log.readText(lastCharacters: 200_000) ?? ""
         if let window {
             window.orderFront(nil)
             return

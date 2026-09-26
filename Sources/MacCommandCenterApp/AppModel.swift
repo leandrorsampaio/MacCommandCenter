@@ -2,8 +2,6 @@ import AppKit
 import AppSupport
 import CommandCore
 import ConfigKit
-import ConsoleKit
-import ConsoleRuntime
 import Foundation
 import Observation
 import PK4Skin
@@ -44,12 +42,8 @@ final class AppModel {
     /// Hook events are parsed here: a PostToolUse carries the tool's whole output.
     @ObservationIgnored private let hookQueue = DispatchQueue(
         label: "com.maccommandcenter.hooks", qos: .utility)
-    /// Everything the hooks reported, as readings. The PK-4 console listens here.
-    @ObservationIgnored var hookReadings: (([Reading]) -> Void)?
-
-    /// The PK-4 console, while its window is open. Nothing of it runs otherwise: no
-    /// `claude agents`, no transcript tails, no timer.
-    private(set) var console: PK4Console?
+    /// The PK-4 console, and the one reader of `~/.claude` it shares with the panel.
+    let consoleHost: ConsoleHost
     @ObservationIgnored private var appliedConfig: AppConfig?
 
     private enum Keys {
@@ -72,12 +66,7 @@ final class AppModel {
         launchesAtLogin = SMAppService.mainApp.status == .enabled
 
         server = ControlServer(center: center, signals: signals)
-
-        // Reading what another tool leaves in the home folder is a direct-build thing:
-        // the App Store build is sandboxed and has no business outside its container.
-        #if !APP_STORE
-        signals.add(ClaudeCodeSource())
-        #endif
+        consoleHost = ConsoleHost(center: center, configs: configs, signals: signals, skins: skins)
         signals.start()
 
         server.events = { [weak self] source, body in
@@ -137,92 +126,6 @@ final class AppModel {
         }
     }
 
-    // MARK: - PK-4 console
-
-    func openConsole() {
-        guard console == nil else { return }
-        let console = PK4Console(commands: consoleCommands()) { [weak self] in
-            self?.keepAwakeReadings() ?? []
-        }
-        self.console = console
-        hookReadings = { [weak console] readings in console?.ingest(readings) }
-        observeKeepAwake()
-    }
-
-    /// Writes the desk's memory and stops every source. Also called on quit.
-    func closeConsole() {
-        console?.shutDown()
-        console = nil
-        hookReadings = nil
-    }
-
-    /// Everything on the desk that reaches outside it. F1 to F10 are still to be defined,
-    /// and answer nothing.
-    private func consoleCommands() -> ConsoleCommands {
-        var actions: [InstrumentID: CommandAction] = [
-            PK4.fc1: keepAwakeAction(.systemAndDisplay),
-            PK4.fc2: keepAwakeAction(.systemOnly),
-        ]
-        #if !APP_STORE
-        actions[PK4.sleepMode] = SystemCommands.sleepMode()
-        actions[PK4.monitorOff] = SystemCommands.monitorOff()
-        #endif
-        return ConsoleCommands(actions: actions)
-    }
-
-    /// FC1 and FC2 are the two Keep Awake modes of whatever config is selected, found by
-    /// what their buttons do. Looked up when pressed, so switching configs needs nothing.
-    private func keepAwakeAction(_ mode: KeepAwakeMode) -> CommandAction {
-        CommandAction { [weak self] _, reply in
-            guard let self, let option = configs.current.keepAwakeOption(mode) else {
-                reply(false)
-                return
-            }
-            do {
-                try center.perform(.toggle(optionID: option.option), on: CommandID(option.command))
-            } catch {
-                reply(false)
-                return
-            }
-            // The registry's new state is the answer, reported as a reading — on the next
-            // turn of the run loop, not from inside the press that asked for it.
-            DispatchQueue.main.async { [weak self] in
-                guard let self else { return }
-                console?.ingest(keepAwakeReadings())
-            }
-        }
-    }
-
-    /// Which Keep Awake mode is on, for FC1's and FC2's lenses. A config without that mode
-    /// reports nothing, and those lenses stay dark.
-    private func keepAwakeReadings() -> [Reading] {
-        let now = Date()
-        let modes: [(KeepAwakeMode, Field)] = [
-            (.systemAndDisplay, .keepAwakeDisplayOn), (.systemOnly, .keepAwakeDisplayOff),
-        ]
-        return modes.compactMap { mode, field in
-            guard let option = configs.current.keepAwakeOption(mode) else { return nil }
-            let active =
-                center.state(for: CommandID(option.command)).activeOptionID == option.option
-            return Reading(.machine, field, .flag(active), at: now, ttl: MachineSource.ttl)
-        }
-    }
-
-    /// Keep Awake switched from the menu bar panel, the CLI or a macro pad shows on the
-    /// console's lenses at once.
-    private func observeKeepAwake() {
-        guard console != nil else { return }
-        withObservationTracking {
-            _ = center.states
-        } onChange: { [weak self] in
-            Task { @MainActor in
-                guard let self, let console = self.console else { return }
-                console.ingest(self.keepAwakeReadings())
-                self.observeKeepAwake()
-            }
-        }
-    }
-
     // MARK: - Hook events
 
     private func receive(source: String, body: Data) {
@@ -259,7 +162,7 @@ final class AppModel {
                 break
             }
         }
-        hookReadings?(readings)
+        consoleHost.hookEvents(readings)
     }
 
     private func push(_ id: String, _ label: String, ttl: TimeInterval) {

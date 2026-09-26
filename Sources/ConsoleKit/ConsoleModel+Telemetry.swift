@@ -328,3 +328,28 @@ extension ConsoleModel {
         return raw == "standard" ? .standard : .other
     }
 }
+
+// MARK: - For commands
+
+/// What a command acting on a session needs to find it: where it works and which process
+/// it is. Read from the newest readings, fresh or not: a command is aimed at the session
+/// as last seen.
+public struct SessionDetails: Sendable, Equatable {
+    public var cwd: String?
+    public var pid: Int?
+    public var name: String?
+    /// A background job has no terminal and no process of its own to signal.
+    public var isJob: Bool
+}
+
+extension ConsoleModel {
+    public func details(of key: SessionKey) -> SessionDetails? {
+        guard let state = sessions[key] else { return nil }
+        let now = clock.now
+        return SessionDetails(
+            cwd: state.readings[.cwd]?.value.text,
+            pid: state.readings[.pid]?.value.count,
+            name: state.readings[.name]?.value.text,
+            isJob: state.isJob(at: now))
+    }
+}

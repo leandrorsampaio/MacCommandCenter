@@ -8,7 +8,7 @@ dependencies, and the aim is to keep it that way.
 ```bash
 git clone https://github.com/leandrorossisampaio/MacCommandCenter.git
 cd MacCommandCenter
-swift test              # 28 tests, all offline
+swift test              # all offline; PK4_LIVE=1 and PK4_RENDER=<dir> opt into the rest
 scripts/build-app.sh    # -> build/MacCommandCenter.app
 open build/MacCommandCenter.app
 ```
@@ -27,6 +27,10 @@ MCC_APP_STORE=1 swift build -c release --product MacCommandCenter
 That last one matters: the App Store build compiles shell actions out, so it can break
 without the default build noticing. CI runs all three.
 
+Two suites run only when asked. `PK4_LIVE=1` points the console's readers at your real
+`~/.claude` and a running `claude`. `PK4_RENDER=<folder>` draws the desk in its states
+and finishes into PNGs, which is the way to check a layout change.
+
 ## How the pieces fit
 
 | Module | Knows about |
@@ -39,8 +43,8 @@ without the default build noticing. CI runs all three.
 | `ConsoleKit` | The PK-4 console's rules: readings and operator intents in, one value per instrument out. No UI, no I/O. |
 | `FakeSources` | A scripted day of telemetry, so the console runs and tests without Claude Code. |
 | `PK4Skin` | The PK-4 console's instruments, drawn to its design system, and their sounds. Knows the console's contract and nothing behind it. |
-| `ConsoleRuntime` | The console's edge with the world: its files in `Application Support/MacCommandCenter/PK-4/`, the timer that drives it, `pmset`, and the sources started and stopped with MAINS. |
-| `MacCommandCenterApp` | The AppKit shell and SwiftUI views that tie the above together. |
+| `ConsoleRuntime` | The console's edge with the world: its files in `Application Support/MacCommandCenter/PK-4/`, the timer that drives it, `pmset`, the F-keys' reach into sessions, and the sources started and stopped with MAINS. |
+| `MacCommandCenterApp` | The AppKit shell and SwiftUI views that tie the above together. `ConsoleHost` decides when the console and the one reader of `~/.claude` run, for the panel and the console both. |
 | `mcc` | A thin HTTP client. Depends only on `CommandCore`'s models. |
 
 The rule that keeps this honest: **the panel does not know what a command is, and a

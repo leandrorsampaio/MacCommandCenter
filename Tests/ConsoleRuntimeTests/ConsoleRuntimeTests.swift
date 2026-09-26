@@ -154,7 +154,7 @@ final class FakePmset: CommandRunning, @unchecked Sendable {
     @Test func theDriverRunsThePowerUpSequenceOnItsOwn() async throws {
         let scratch = Scratch()
         let console = PK4Console(
-            directory: scratch.url, commands: .unassigned, readsClaudeCode: false)
+            directory: scratch.url, commands: .unassigned)
         defer { console.shutDown() }
         #expect(console.model.snapshot.nixie(PK4.selected) == " ")
 
@@ -166,7 +166,7 @@ final class FakePmset: CommandRunning, @unchecked Sendable {
     @Test func mainsStartsAndStopsTheSources() {
         let scratch = Scratch()
         let console = PK4Console(
-            directory: scratch.url, commands: .unassigned, readsClaudeCode: false)
+            directory: scratch.url, commands: .unassigned)
         defer { console.shutDown() }
         #expect(console.isReadingSources)
 
@@ -179,7 +179,7 @@ final class FakePmset: CommandRunning, @unchecked Sendable {
     @Test func shuttingDownWritesTheDesksMemoryAndTheLog() throws {
         let scratch = Scratch()
         let console = PK4Console(
-            directory: scratch.url, commands: .unassigned, readsClaudeCode: false)
+            directory: scratch.url, commands: .unassigned)
         console.send(.pencil(slot: 2, text: "tax"))
         console.send(.mains(false))
         console.shutDown()
@@ -193,7 +193,7 @@ final class FakePmset: CommandRunning, @unchecked Sendable {
     @Test func theAppsOwnReadingsArriveWithTheMachines() async throws {
         let scratch = Scratch()
         let console = PK4Console(
-            directory: scratch.url, commands: .unassigned, readsClaudeCode: false,
+            directory: scratch.url, commands: .unassigned,
             extras: { [Reading(.machine, .keepAwakeDisplayOff, .flag(true), at: Date(), ttl: 30)] })
         defer { console.shutDown() }
         try await Task.sleep(for: .seconds(2.2))

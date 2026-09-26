@@ -19,6 +19,33 @@ public struct SkinLayout: Sendable, Equatable {
         .readout(ReadoutSpec(style: .lcd)),
         .commands(style: .tile, columns: 0),
     ])
+
+    /// Every signal an instrument in this layout is wired to, so that what nothing shows
+    /// need not be read.
+    public var signalIDs: Set<String> { Self.signals(in: rows) }
+
+    private static func signals(in slots: [SkinSlot]) -> Set<String> {
+        var ids: Set<String> = []
+        for slot in slots {
+            switch slot {
+            case .gauge(let spec):
+                if case .signal(let id) = spec.source { ids.insert(id) }
+            case .readout(let spec):
+                for line in [spec.primary, spec.secondary] {
+                    if case .signal(let id) = line { ids.insert(id) }
+                }
+            case .lamps(_, let sources):
+                for source in sources {
+                    if case .signal(let id) = source { ids.insert(id) }
+                }
+            case .row(let children):
+                ids.formUnion(signals(in: children))
+            case .nameplate, .annunciator, .commands, .controls, .spacer:
+                break
+            }
+        }
+        return ids
+    }
 }
 
 public indirect enum SkinSlot: Sendable, Equatable {

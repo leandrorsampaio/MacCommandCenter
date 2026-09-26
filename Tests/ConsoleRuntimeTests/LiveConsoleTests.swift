@@ -17,6 +17,9 @@ struct LiveConsoleTests {
     @Test func eightSecondsOfTheRealDesk() async throws {
         let scratch = Scratch()
         let console = PK4Console(directory: scratch.url, commands: .unassigned)
+        let feed = ClaudeCodeFeed { console.ingest($0) }
+        feed.start()
+        defer { feed.stop() }
         try await Task.sleep(for: .seconds(8))
 
         let snap = console.model.snapshot
@@ -63,7 +66,12 @@ struct LiveChurnTests {
     @Test func whatChangesAndHowOften() async throws {
         let scratch = Scratch()
         let console = PK4Console(directory: scratch.url, commands: .unassigned)
-        defer { console.shutDown() }
+        let feed = ClaudeCodeFeed { console.ingest($0) }
+        feed.start()
+        defer {
+            feed.stop()
+            console.shutDown()
+        }
         try await Task.sleep(for: .seconds(4))
         var previous = console.model.snapshot
         var changes = 0

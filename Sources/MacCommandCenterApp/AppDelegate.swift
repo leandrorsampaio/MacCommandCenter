@@ -18,11 +18,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         model.isHotKeyRegistered = (hotKey != nil)
 
-        if model.openConsoleAtLaunch { model.requestConsole?() }
+        if model.openConsoleAtLaunch {
+            model.requestConsole?()
+        } else {
+            model.consoleHost.startIfItWasRunning()
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        model?.closeConsole()
+        model?.consoleHost.close()
         model?.center.deactivateAll()
         model?.server.stop()
     }

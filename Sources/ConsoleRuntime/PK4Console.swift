@@ -50,12 +50,14 @@ public final class ConsoleDriver {
     }
 }
 
-/// The PK-4 console, running: the model, its files, its timer and every source that feeds
-/// it, started and stopped with MAINS.
+/// The PK-4 console, running: the model, its files, its timer and the Mac's own readings,
+/// started and stopped with MAINS.
 ///
-/// Views talk to `send` and read `model.snapshot`. The app hands in what only it knows —
-/// the commands that reach outside the console, and readings of its own, such as which
-/// Keep Awake mode is on — and forwards hook events to `ingest`.
+/// Views talk to `send` and read `model.snapshot`. Claude Code's readings come from the
+/// app, which shares one reader of `~/.claude` between the console and the menu bar panel:
+/// `onPower` tells it when the console starts and stops wanting them, which is how MAINS
+/// off stops the polling. The app also hands in the commands that reach outside the
+/// console, and readings of its own, such as which Keep Awake mode is on.
 @MainActor
 public final class PK4Console {
 
@@ -65,35 +67,34 @@ public final class PK4Console {
 
     private let driver: ConsoleDriver
     private let extras: @MainActor () -> [Reading]
+    private let readsMachine: Bool
+    private let onPower: @MainActor (Bool) -> Void
     private var machine: MachineSource?
-    #if !APP_STORE
-    private let readsClaudeCode: Bool
-    private var claude: ClaudeCodeFeed?
-    #endif
     private var sourcesRunning = false
 
     /// - Parameters:
     ///   - directory: where the desk's memory and its logs are kept.
     ///   - commands: how the buttons that reach outside the console are carried out.
-    ///   - readsClaudeCode: whether to read `~/.claude`. Off in tests, and not possible in
-    ///     the App Store build, where only hook events reach the console.
+    ///   - readsMachine: whether to read the Mac's power and sleep. Off for the scripted
+    ///     day, which brings its own.
     ///   - extras: readings the app contributes, collected with each machine reading.
+    ///   - onPower: told when the console starts and stops wanting readings.
     public init(
         directory: URL = ConsoleFolder.url,
         commands: ConsoleCommands,
-        readsClaudeCode: Bool = true,
-        extras: @escaping @MainActor () -> [Reading] = { [] }
+        readsMachine: Bool = true,
+        extras: @escaping @MainActor () -> [Reading] = { [] },
+        onPower: @escaping @MainActor (Bool) -> Void = { _ in }
     ) {
         self.directory = directory
         self.extras = extras
+        self.readsMachine = readsMachine
+        self.onPower = onPower
         log = FileConsoleLog(directory: directory)
         model = ConsoleModel(
             clock: SystemClock(), store: FileConsoleStore(directory: directory), log: log,
             commands: commands)
         driver = ConsoleDriver(model: model)
-        #if !APP_STORE
-        self.readsClaudeCode = readsClaudeCode
-        #endif
         syncSources()
         driver.poke()
     }
@@ -108,6 +109,12 @@ public final class PK4Console {
         guard !readings.isEmpty else { return }
         model.ingest(readings)
         driver.poke()
+    }
+
+    /// A pass of a source: its readings, and anything it could not read.
+    public func ingest(_ batch: TelemetryBatch) {
+        batch.issues.forEach(model.report)
+        ingest(batch.readings)
     }
 
     /// Stops everything and writes the desk's memory. Call before letting go of it.
@@ -128,25 +135,15 @@ public final class PK4Console {
     private func startSources() {
         guard !sourcesRunning else { return }
         sourcesRunning = true
-
-        let machine = MachineSource { [weak self] readings in
-            guard let self else { return }
-            self.ingest(readings + self.extras())
-        }
-        machine.start()
-        self.machine = machine
-
-        #if !APP_STORE
-        if readsClaudeCode {
-            let claude = ClaudeCodeFeed { [weak self] batch in
+        if readsMachine {
+            let machine = MachineSource { [weak self] readings in
                 guard let self else { return }
-                batch.issues.forEach(self.model.report)
-                self.ingest(batch.readings)
+                self.ingest(readings + self.extras())
             }
-            claude.start()
-            self.claude = claude
+            machine.start()
+            self.machine = machine
         }
-        #endif
+        onPower(true)
     }
 
     private func stopSources() {
@@ -154,9 +151,6 @@ public final class PK4Console {
         sourcesRunning = false
         machine?.stop()
         machine = nil
-        #if !APP_STORE
-        claude?.stop()
-        claude = nil
-        #endif
+        onPower(false)
     }
 }

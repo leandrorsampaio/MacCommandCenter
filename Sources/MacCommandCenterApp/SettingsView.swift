@@ -203,16 +203,18 @@ struct AdvancedSettingsView: View {
 // MARK: - Console
 
 /// The PK-4 console's preferences. The finish and the buzzer belong to the desk and are
-/// kept in its memory, so they can be changed only while it is open; sound, volume and
+/// kept in its memory, so they can be changed only while it is running; sound, volume and
 /// lamp codes belong to whoever is looking.
 struct ConsoleSettingsView: View {
 
     let model: AppModel
 
+    private var host: ConsoleHost { model.consoleHost }
+
     var body: some View {
         Form {
             Section {
-                if let console = model.console {
+                if let console = host.console {
                     Picker(
                         "Panel finish",
                         selection: Binding(
@@ -231,16 +233,56 @@ struct ConsoleSettingsView: View {
                     Text("A muted buzzer never mutes the flash.")
                         .font(.caption).foregroundStyle(.secondary)
                 } else {
-                    LabeledContent("The console is closed") {
+                    LabeledContent("The console is not running") {
                         Button("Open PK-4 Console") { model.requestConsole?() }
                     }
                     Text(
-                        "Its finish and buzzer are kept with the desk, and change while it is open."
+                        "Its finish and buzzer are kept with the desk, and change while it runs."
                     )
                     .font(.caption).foregroundStyle(.secondary)
                 }
             } header: {
                 Text("Desk")
+            }
+
+            Section {
+                Toggle(
+                    "Keep the console running when its window is closed",
+                    isOn: Binding(get: { host.keepRunning }, set: { host.keepRunning = $0 }))
+                Toggle(
+                    "Play a scripted day instead of reading Claude Code",
+                    isOn: Binding(get: { host.demo }, set: { host.demo = $0 }))
+            } header: {
+                Text("Running")
+            } footer: {
+                Text(
+                    "Running behind a closed window, the drum counters and hours in service keep counting; it costs a fraction of a percent of one core. The scripted day keeps its own totals and log, and its buttons reach nothing outside the desk but Keep Awake."
+                )
+                .font(.caption).foregroundStyle(.secondary)
+            }
+
+            Section {
+                LabeledContent("Last hook event") {
+                    if let last = host.lastHookEvent {
+                        Text(last, style: .relative) + Text(" ago")
+                    } else {
+                        Text("None since the app started").foregroundStyle(.secondary)
+                    }
+                }
+                if !model.isControlServerEnabled {
+                    Label(
+                        "The control API is off, so hook events have nowhere to arrive. Turn it on under Advanced.",
+                        systemImage: "exclamationmark.triangle"
+                    )
+                    .foregroundStyle(.orange)
+                }
+            } header: {
+                Text("Claude Code hooks")
+            } footer: {
+                Text(
+                    "WAITING, TURN DONE and AGENT DONE are lit by hooks and nothing else. Without them the console still sees every session and its numbers. Install them with scripts/install-claude-hooks.sh --install."
+                )
+                .font(.caption).foregroundStyle(.secondary)
             }
 
             Section {

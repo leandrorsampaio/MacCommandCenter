@@ -44,6 +44,27 @@ public struct FakeDay: Sendable {
         sessions = SimSession.cast()
     }
 
+    /// When a demo opens the day: 08:55, five minutes before the first alarm.
+    public static let opensAt: TimeInterval = 55 * 60
+
+    /// The day as a demo plays it. Everything before 08:55 has already happened, unseen,
+    /// and the day's clock is set so that 08:55 is `moment`: its readings are stamped with
+    /// the real time, and nothing downstream can tell them from Claude Code's. It stops
+    /// one tick short, so the first catch-up has the whole desk to report.
+    public static func opening(at moment: Date, seed: UInt64 = 1972) -> FakeDay {
+        var day = FakeDay(start: moment.addingTimeInterval(-opensAt), seed: seed)
+        while day.elapsed + tick < opensAt { _ = day.step() }
+        return day
+    }
+
+    /// Every tick due by `moment`, so a day played on a timer keeps to the wall clock
+    /// rather than drifting from it.
+    public mutating func catchUp(to moment: Date) -> [Reading] {
+        var out: [Reading] = []
+        while !isOver, now.addingTimeInterval(Self.tick) <= moment { out += step() }
+        return out
+    }
+
     /// Advances one tick and returns everything the sources would have reported in it.
     public mutating func step() -> [Reading] {
         elapsed += Self.tick

@@ -53,7 +53,7 @@ let package = Package(
             name: "MacCommandCenterApp",
             dependencies: [
                 "CommandCore", "SkinKit", "ConfigKit", "TelemetryKit", "ConsoleKit",
-                "ConsoleRuntime", "PK4Skin",
+                "ConsoleRuntime", "PK4Skin", "FakeSources",
             ],
             swiftSettings: settings
         ),

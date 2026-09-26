@@ -187,6 +187,24 @@ struct SkinLayoutTests {
             ])
     }
 
+    /// The app reads `~/.claude` for the panel only while a skin shows something from it.
+    @Test func listsTheSignalsItsInstrumentsAreWiredTo() throws {
+        let parsed = try #require(
+            layout(
+                """
+                { "layout": [
+                    { "slot": "row", "children": [
+                        { "slot": "gauge", "source": "signal:claude.context" },
+                        { "slot": "readout", "primary": "signal:claude.cost", "secondary": "uptime" }
+                    ]},
+                    { "slot": "gauge", "source": "battery" },
+                    { "slot": "lamps", "sources": ["commands", "signal:claude.waiting", "battery"] }
+                ]}
+                """))
+        #expect(parsed.signalIDs == ["claude.context", "claude.cost", "claude.waiting"])
+        #expect(SkinLayout.stack.signalIDs.isEmpty)
+    }
+
     /// A layout written for a later version must still render what this build knows.
     @Test func unknownSlotsAreSkippedRatherThanFailing() throws {
         let parsed = try #require(

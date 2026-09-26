@@ -36,6 +36,23 @@ enum Haptic {
     }
 }
 
+/// Tab stops here, and Space or Return does what a click does.
+struct KeyOperable: ViewModifier {
+    var enabled = true
+    var focus: FocusState<Bool>.Binding
+    var action: () -> Void
+
+    func body(content: Content) -> some View {
+        content
+            .focusable(enabled)
+            .focused(focus)
+            .onKeyPress(keys: [.space, .return]) { _ in
+                action()
+                return .handled
+            }
+    }
+}
+
 /// The focus ring every control uses: 3 points of lit amber, 3 points out.
 struct FocusRing: ViewModifier {
     var focused: Bool
@@ -340,6 +357,7 @@ struct GuardedButton: View {
 
     @State private var angle: Double = 0
     @State private var motion = 0
+    @FocusState private var flapFocused: Bool
     @Environment(\.pk4) private var palette
     @Environment(\.pk4Finish) private var finish
     @Environment(\.pk4Send) private var send
@@ -443,8 +461,11 @@ struct GuardedButton: View {
     }
 
     /// Plain translucent red acrylic: the stripes already say what it is.
-    private var flap: some View {
-        RoundedRectangle(cornerRadius: 4)
+    private var acrylic: some View {
+        let raised = angle > 60
+        let shadow: (opacity: Double, radius: CGFloat, y: CGFloat) =
+            raised ? (0.35, 5, -6) : (0.5, 2.5, 3)
+        return RoundedRectangle(cornerRadius: 4)
             .fill(Color(red: 200 / 255, green: 50 / 255, blue: 31 / 255).opacity(0.74))
             .overlay {
                 RoundedRectangle(cornerRadius: 4).fill(
@@ -460,29 +481,40 @@ struct GuardedButton: View {
                 RoundedRectangle(cornerRadius: 4).strokeBorder(
                     Color(red: 90 / 255, green: 12 / 255, blue: 4 / 255).opacity(0.9), lineWidth: 2)
             }
-            .shadow(
-                color: .black.opacity(angle > 60 ? 0.35 : 0.5), radius: angle > 60 ? 5 : 2.5,
-                y: angle > 60 ? -6 : 3
-            )
+            .shadow(color: .black.opacity(shadow.opacity), radius: shadow.radius, y: shadow.y)
+    }
+
+    private var flap: some View {
+        acrylic
+            // The ring is on the flap, and swings up with it.
+            .modifier(FocusRing(focused: flapFocused, radius: 4))
             .padding(6)
             .rotation3DEffect(
                 .degrees(angle), axis: (x: 1, y: 0, z: 0), anchor: .top, perspective: 0.35
             )
             .contentShape(Rectangle())
-            .onTapGesture { send(.guard(id, open: !open)) }
+            .onTapGesture(perform: toggleGuard)
             // Lifted, the flap still answers a click, over the hinge where it now stands.
             .allowsHitTesting(!open)
-            .overlay(alignment: .top) {
-                if open {
-                    Color.clear.frame(height: 36).contentShape(Rectangle()).offset(y: -36)
-                        .onTapGesture { send(.guard(id, open: false)) }
-                }
-            }
+            .overlay(alignment: .top) { hinge }
+            // Tab reaches the flap before what it covers.
+            .modifier(KeyOperable(focus: $flapFocused, action: toggleGuard))
             .accessibilityElement()
             .accessibilityLabel("Guard of \(label)")
             .accessibilityValue(open ? "lifted" : "closed")
             .accessibilityAddTraits(.isButton)
-            .accessibilityAction { send(.guard(id, open: !open)) }
+            .accessibilityAction { toggleGuard() }
+    }
+
+    @ViewBuilder private var hinge: some View {
+        if open {
+            Color.clear.frame(height: 36).contentShape(Rectangle()).offset(y: -36)
+                .onTapGesture { send(.guard(id, open: false)) }
+        }
+    }
+
+    private func toggleGuard() {
+        send(.guard(id, open: !open))
     }
 
     /// Lifted by hand: up past its rest to 121° and back to 112°. Let go, it falls under
@@ -520,6 +552,7 @@ struct KeySwitch: View {
     var armed: Bool
     var reachable: Bool
 
+    @FocusState private var focused: Bool
     @Environment(\.pk4) private var palette
     @Environment(\.pk4Send) private var send
 
@@ -541,12 +574,23 @@ struct KeySwitch: View {
         }
         .frame(width: 56, height: 56)
         .contentShape(Circle())
-        .onTapGesture { send(.key(id, armed: !armed)) }
+        .onTapGesture(perform: turn)
         .allowsHitTesting(reachable)
+        // Under a closed guard the key cannot be reached by hand, so not by Tab either.
+        .modifier(KeyOperable(enabled: reachable, focus: $focused, action: turn))
+        .modifier(FocusRing(focused: focused, radius: 28))
         .accessibilityElement()
         .accessibilityLabel("Key switch")
         .accessibilityValue(armed ? "armed" : "safe")
+        .accessibilityHint(reachable ? "" : "Under the guard")
         .accessibilityAddTraits(.isButton)
+        .accessibilityAction {
+            if reachable { turn() }
+        }
+    }
+
+    private func turn() {
+        send(.key(id, armed: !armed))
     }
 }
 
@@ -886,72 +930,89 @@ struct PencilStrip: View {
     @State private var draft = ""
     @State private var editing = false
     @FocusState private var focused: Bool
+    @FocusState private var cardFocused: Bool
     @Environment(\.pk4) private var palette
     @Environment(\.pk4Send) private var send
 
     var body: some View {
+        card
+            .modifier(FocusRing(focused: focused || cardFocused, radius: 3))
+            .contentShape(Rectangle())
+            .onTapGesture(perform: pickUpPencil)
+            // Tab stops at the card; Return picks up the pencil, as a click does.
+            .modifier(KeyOperable(enabled: !editing, focus: $cardFocused, action: pickUpPencil))
+            .onChange(of: focused) { _, now in if !now { editing = false } }
+            .onChange(of: draft) { _, now in write(now) }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Project name, session \(slot), in pencil")
+            .accessibilityValue(text.isEmpty ? "blank" : text)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAction { pickUpPencil() }
+    }
+
+    @ViewBuilder private var writing: some View {
+        if editing {
+            TextField("", text: $draft)
+                .textFieldStyle(.plain)
+                .focused($focused)
+                .onSubmit { editing = false }
+                .onAppear { focused = true }
+        } else {
+            // Twelve characters in pencil do not always fit the card: the hand writes
+            // smaller rather than off the edge.
+            Text(text)
+                .lineLimit(1)
+                .minimumScaleFactor(0.55)
+        }
+    }
+
+    private var paper: some View {
         ZStack {
-            if editing {
-                TextField("", text: $draft)
-                    .textFieldStyle(.plain)
-                    .focused($focused)
-                    .onSubmit { editing = false }
-                    .onAppear { focused = true }
-            } else {
-                // Twelve characters in pencil do not always fit the card: the hand writes
-                // smaller rather than off the edge.
-                Text(text)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.55)
-            }
+            palette.paper
+            LinearGradient(
+                colors: [.black.opacity(0.06), .clear], startPoint: .top,
+                endPoint: UnitPoint(x: 0.5, y: 0.3))
         }
-        .font(PK4Type.pencil(22))
-        .foregroundStyle(Color(hex: 0x4A4A48))
-        .multilineTextAlignment(.center)
-        .padding(.horizontal, 4)
-        .frame(width: PK4Size.windowWidth - 8, height: PK4Size.windowHeight - 8)
-        .background {
-            ZStack {
-                palette.paper
+    }
+
+    private var holder: some View {
+        RoundedRectangle(cornerRadius: 3)
+            .fill(
                 LinearGradient(
-                    colors: [.black.opacity(0.06), .clear], startPoint: .top,
-                    endPoint: UnitPoint(x: 0.5, y: 0.3))
+                    colors: [
+                        Color(hex: 0xF4F5F0), Color(hex: 0xDFE0D9), Color(hex: 0x9A9D95),
+                        Color(hex: 0x74776F),
+                    ],
+                    startPoint: .topLeading, endPoint: .bottomTrailing)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 3).strokeBorder(.black.opacity(0.55), lineWidth: 1)
             }
-        }
-        .clipped()
-        .padding(4)
-        .background {
-            RoundedRectangle(cornerRadius: 3)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color(hex: 0xF4F5F0), Color(hex: 0xDFE0D9), Color(hex: 0x9A9D95),
-                            Color(hex: 0x74776F),
-                        ],
-                        startPoint: .topLeading, endPoint: .bottomTrailing)
-                )
-                .overlay {
-                    RoundedRectangle(cornerRadius: 3).strokeBorder(
-                        .black.opacity(0.55), lineWidth: 1)
-                }
-                .shadow(color: .black.opacity(0.45), radius: 1.5, y: 2)
-        }
-        .modifier(FocusRing(focused: focused, radius: 3))
-        .contentShape(Rectangle())
-        .onTapGesture {
-            draft = text
-            editing = true
-        }
-        .onChange(of: focused) { _, now in if !now { editing = false } }
-        .onChange(of: draft) { _, now in
-            guard editing else { return }
-            let clipped = String(now.prefix(12))
-            if clipped != now { draft = clipped }
-            if clipped != text { send(.pencil(slot: slot, text: clipped)) }
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Project name, session \(slot), in pencil")
-        .accessibilityValue(text.isEmpty ? "blank" : text)
-        .accessibilityAddTraits(.isButton)
+            .shadow(color: .black.opacity(0.45), radius: 1.5, y: 2)
+    }
+
+    private var card: some View {
+        writing
+            .font(PK4Type.pencil(22))
+            .foregroundStyle(Color(hex: 0x4A4A48))
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 4)
+            .frame(width: PK4Size.windowWidth - 8, height: PK4Size.windowHeight - 8)
+            .background { paper }
+            .clipped()
+            .padding(4)
+            .background { holder }
+    }
+
+    private func write(_ now: String) {
+        guard editing else { return }
+        let clipped = String(now.prefix(12))
+        if clipped != now { draft = clipped }
+        if clipped != text { send(.pencil(slot: slot, text: clipped)) }
+    }
+
+    private func pickUpPencil() {
+        draft = text
+        editing = true
     }
 }

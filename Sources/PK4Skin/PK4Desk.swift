@@ -61,22 +61,13 @@ public struct PK4Desk: View {
 
     public var body: some View {
         let s = snapshot
-        VStack(spacing: 16) {
+        DeskLayout {
             DeskHeader(build: s.programBuild)
-            HStack(alignment: .top, spacing: 16) {
-                VStack(spacing: 16) {
-                    PanelA(s: s).frame(maxHeight: .infinity)
-                    PanelE(s: s)
-                }
-                .frame(width: 650)
-                PanelB(s: s).frame(width: 1190).frame(maxHeight: .infinity)
-                VStack(spacing: 16) {
-                    PanelC(s: s)
-                    PanelD(s: s).frame(maxHeight: .infinity)
-                }
-                .frame(width: 580)
-            }
-            .frame(maxHeight: .infinity)
+            panel("A · All sessions", PanelA(s: s))
+            panel("B · Selected session", PanelB(s: s))
+            panel("C · Control", PanelC(s: s))
+            panel("D · Computer controls", PanelD(s: s))
+            panel("E · Power and service", PanelE(s: s))
         }
         .padding(22)
         .background {
@@ -85,6 +76,65 @@ public struct PK4Desk: View {
                 .overlay { Bevel(radius: 6, light: 0.35, dark: 0.4) }
         }
         .foregroundStyle(palette.paint(finish).ink)
+    }
+}
+
+extension PK4Desk {
+    /// A panel is one stop for VoiceOver and one section for the Tab key, so moving
+    /// between panels is one step and moving within one stays inside it.
+    private func panel(_ name: String, _ content: some View) -> some View {
+        content
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .focusSection()
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel(name)
+    }
+}
+
+/// Three columns, five panels, listed in reading order: A, B, C, D, E.
+///
+/// VoiceOver and the Tab key go through the panels in the order they are listed, not the
+/// order they are drawn, and a column of stacks would list E, at the foot of the first
+/// column, before B. So the desk is one layout that puts each panel where it belongs: A
+/// over E on the left, B in the middle, C over D on the right. A and D take whatever
+/// height their column leaves; B takes it all.
+struct DeskLayout: Layout {
+    static let columns: [CGFloat] = [650, 1190, 580]
+    static let gap: CGFloat = 16
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        proposal.replacingUnspecifiedDimensions()
+    }
+
+    func placeSubviews(
+        in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()
+    ) {
+        guard subviews.count == 6 else { return }
+        let gap = Self.gap
+        let widths = Self.columns
+        func natural(_ index: Int, width: CGFloat) -> CGFloat {
+            subviews[index].sizeThatFits(ProposedViewSize(width: width, height: nil)).height
+        }
+        func place(_ index: Int, _ x: CGFloat, _ y: CGFloat, _ width: CGFloat, _ height: CGFloat) {
+            subviews[index].place(
+                at: CGPoint(x: x, y: y), proposal: ProposedViewSize(width: width, height: height))
+        }
+
+        let header = natural(0, width: bounds.width)
+        place(0, bounds.minX, bounds.minY, bounds.width, header)
+        let top = bounds.minY + header + gap
+        let height = bounds.maxY - top
+        let left = bounds.minX
+        let middle = left + widths[0] + gap
+        let right = middle + widths[1] + gap
+
+        let e = natural(5, width: widths[0])
+        place(1, left, top, widths[0], height - e - gap)
+        place(5, left, bounds.maxY - e, widths[0], e)
+        place(2, middle, top, widths[1], height)
+        let c = natural(3, width: widths[2])
+        place(3, right, top, widths[2], c)
+        place(4, right, top + c + gap, widths[2], height - c - gap)
     }
 }
 
@@ -180,8 +230,9 @@ private struct PanelA: View {
     ]
 
     var body: some View {
-        PK4Panel(title: "A · All sessions — annunciator", spacing: 30) {
-            Grid(horizontalSpacing: 8, verticalSpacing: 16) {
+        // The tallest column on the desk: A over E fills it to the last unit.
+        PK4Panel(title: "A · All sessions — annunciator", spacing: 22) {
+            Grid(horizontalSpacing: 8, verticalSpacing: 12) {
                 GridRow {
                     Plate(text: "Session", width: 190)
                     ForEach(PK4.slots, id: \.self) { slot in
@@ -464,7 +515,7 @@ private struct PanelB: View {
                     HStack(alignment: .top, spacing: 36) {
                         guarded(PK4.f8, "F8", "[Function 8]", keyed: false, code: "SB4")
                         guarded(PK4.f9, "F9", "[Function 9]", keyed: false, code: "SB5")
-                        guarded(PK4.f10, "F10", "[Function 10]", keyed: true, code: "SB6")
+                        guarded(PK4.f10, "F10", "End session", keyed: true, code: "SB6")
                     }
                     Spacer()
                 }
@@ -550,6 +601,13 @@ private struct LampGroup: View {
 private struct PanelC: View {
     let s: ConsoleSnapshot
 
+    /// What the routine keys do, on their plates. F6 and F7 keep the placeholder until
+    /// they have a job: a key labelled with a promise it cannot keep is worse.
+    static let functions: [Int: String] = [
+        1: "Open folder", 2: "Terminal here", 3: "Copy resume", 4: "Safety log",
+        5: "Show transcript",
+    ]
+
     var body: some View {
         PK4Panel(title: "C · Control — selected session", spacing: 26) {
             NixieReadout(
@@ -569,7 +627,7 @@ private struct PanelC: View {
                             if number <= 7 {
                                 PushButton(
                                     id: PK4.function(number), cap: "F\(number)",
-                                    label: "[Function \(number)]",
+                                    label: Self.functions[number] ?? "[Function \(number)]",
                                     face: s.button(PK4.function(number)), code: "SB\(7 + number)")
                             } else {
                                 BlankingPlate(text: "Spare", size: CGSize(width: 112, height: 100))
@@ -649,7 +707,7 @@ private struct PanelE: View {
     @Environment(\.pk4) private var palette
 
     var body: some View {
-        PK4Panel(title: "E · Power and service", spacing: 26) {
+        PK4Panel(title: "E · Power and service", spacing: 20) {
             HStack(alignment: .center) {
                 HStack(alignment: .center, spacing: 18) {
                     ToggleSwitch(label: "Mains 220 V 50 Hz", on: s.mains, code: "SA2")

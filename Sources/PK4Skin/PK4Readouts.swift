@@ -153,6 +153,19 @@ struct DrumCounter: View {
             if let unit { Text(unit.plate).font(PK4Type.label(13)).tracking(0.78) }
             if let code { Tag(text: code) }
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(label)
+        .accessibilityValue(unit.map { "\(value) \(Self.spoken($0))" } ?? "\(value)")
+    }
+
+    /// The units as they are said, not as they are stamped.
+    static func spoken(_ unit: String) -> String {
+        switch unit {
+        case "$": "dollars"
+        case "h": "hours"
+        case "×1000 tok": "thousand tokens"
+        default: unit
+        }
     }
 }
 

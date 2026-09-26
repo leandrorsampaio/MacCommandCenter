@@ -90,6 +90,25 @@ import Testing
         #expect(replay.bench.snap.drum(PK4.hoursInService) == 10)
     }
 
+    /// A demo opens at 08:55 on the wall clock's time, and keeps to it.
+    @Test func aDemoOpensAtFiveToNineAndKeepsToTheClock() {
+        let moment = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        var day = FakeDay.opening(at: moment)
+        #expect(day.now == moment.addingTimeInterval(-FakeDay.tick))
+
+        let first = day.catchUp(to: moment)
+        #expect(day.now == moment)
+        #expect(first.contains { $0.field == .roster })
+        #expect(first.allSatisfy { $0.observedAt <= moment })
+
+        // Three seconds on is one tick: the second is not due yet.
+        _ = day.catchUp(to: moment.addingTimeInterval(3))
+        #expect(day.now == moment.addingTimeInterval(2))
+        // A timer that fired late catches up in one go.
+        _ = day.catchUp(to: moment.addingTimeInterval(20))
+        #expect(day.now == moment.addingTimeInterval(20))
+    }
+
     @Test func theDayIsTheSameEveryTime() {
         let first = replay(hours: 2).bench.model.saved.totals
         let second = replay(hours: 2).bench.model.saved.totals
