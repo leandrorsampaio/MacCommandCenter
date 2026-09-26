@@ -35,6 +35,11 @@ without the default build noticing. CI runs all three.
 | `CommandCore` | The command registry, power assertions, the HTTP API. No UI, no config format. |
 | `SkinKit` | Appearance only. Does not know what a command is. |
 | `ConfigKit` | Behaviour: the config format, actions, shell consent. Depends on `CommandCore`. |
+| `TelemetryKit` | What Claude Code and the Mac report, as typed readings with a time-to-live. No UI, no instruments. The readers of `~/.claude` are direct-download only. |
+| `ConsoleKit` | The PK-4 console's rules: readings and operator intents in, one value per instrument out. No UI, no I/O. |
+| `FakeSources` | A scripted day of telemetry, so the console runs and tests without Claude Code. |
+| `PK4Skin` | The PK-4 console's instruments, drawn to its design system, and their sounds. Knows the console's contract and nothing behind it. |
+| `ConsoleRuntime` | The console's edge with the world: its files in `Application Support/MacCommandCenter/PK-4/`, the timer that drives it, `pmset`, and the sources started and stopped with MAINS. |
 | `MacCommandCenterApp` | The AppKit shell and SwiftUI views that tie the above together. |
 | `mcc` | A thin HTTP client. Depends only on `CommandCore`'s models. |
 

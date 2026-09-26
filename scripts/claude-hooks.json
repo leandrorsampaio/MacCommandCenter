@@ -1,32 +1,26 @@
 {
-  "_comment": "Claude Code hooks that report into Mac Command Center's control API. Merge into ~/.claude/settings.json, or run scripts/install-claude-hooks.sh. Every call is best-effort: '|| true' keeps a closed panel from failing the hook, and '-m 2' keeps a wedged socket from hanging the session.",
+  "_comment": "Claude Code hooks that report into Mac Command Center's control API. Each one pipes the hook's own JSON input to POST /v1/events/claude, where the app reads the session, the event and nothing it does not need. Merge into ~/.claude/settings.json, or run scripts/install-claude-hooks.sh. 'async' means Claude Code never waits for them; '|| true' and '-m 2' mean a closed app or a switched-off control API costs the session nothing.",
   "hooks": {
-    "Notification": [
+    "SessionStart": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "curl -sS -m 2 -H 'X-MCC-Client: 1' 'http://127.0.0.1:8787/v1/signals/claude.waiting?label=Waiting&ttl=1800' >/dev/null 2>&1 || true"
+            "command": "curl -sS -m 2 -H 'X-MCC-Client: 1' -H 'Content-Type: application/json' --data-binary @- 'http://127.0.0.1:8787/v1/events/claude' >/dev/null 2>&1 || true",
+            "async": true,
+            "timeout": 5
           }
         ]
       }
     ],
-    "Stop": [
+    "SessionEnd": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "curl -sS -m 2 -H 'X-MCC-Client: 1' 'http://127.0.0.1:8787/v1/signals/claude.done?label=Done&ttl=1800' >/dev/null 2>&1 || true; curl -sS -m 2 -H 'X-MCC-Client: 1' 'http://127.0.0.1:8787/v1/signals/claude.waiting?clear=1' >/dev/null 2>&1 || true"
-          }
-        ]
-      }
-    ],
-    "SubagentStop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "curl -sS -m 2 -H 'X-MCC-Client: 1' 'http://127.0.0.1:8787/v1/signals/claude.agent?label=Agent&ttl=900' >/dev/null 2>&1 || true"
+            "command": "curl -sS -m 2 -H 'X-MCC-Client: 1' -H 'Content-Type: application/json' --data-binary @- 'http://127.0.0.1:8787/v1/events/claude' >/dev/null 2>&1 || true",
+            "async": true,
+            "timeout": 5
           }
         ]
       }
@@ -36,7 +30,117 @@
         "hooks": [
           {
             "type": "command",
-            "command": "curl -sS -m 2 -H 'X-MCC-Client: 1' 'http://127.0.0.1:8787/v1/signals/claude.waiting?clear=1' >/dev/null 2>&1 || true; curl -sS -m 2 -H 'X-MCC-Client: 1' 'http://127.0.0.1:8787/v1/signals/claude.done?clear=1' >/dev/null 2>&1 || true"
+            "command": "curl -sS -m 2 -H 'X-MCC-Client: 1' -H 'Content-Type: application/json' --data-binary @- 'http://127.0.0.1:8787/v1/events/claude' >/dev/null 2>&1 || true",
+            "async": true,
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -sS -m 2 -H 'X-MCC-Client: 1' -H 'Content-Type: application/json' --data-binary @- 'http://127.0.0.1:8787/v1/events/claude' >/dev/null 2>&1 || true",
+            "async": true,
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -sS -m 2 -H 'X-MCC-Client: 1' -H 'Content-Type: application/json' --data-binary @- 'http://127.0.0.1:8787/v1/events/claude' >/dev/null 2>&1 || true",
+            "async": true,
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -sS -m 2 -H 'X-MCC-Client: 1' -H 'Content-Type: application/json' --data-binary @- 'http://127.0.0.1:8787/v1/events/claude' >/dev/null 2>&1 || true",
+            "async": true,
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -sS -m 2 -H 'X-MCC-Client: 1' -H 'Content-Type: application/json' --data-binary @- 'http://127.0.0.1:8787/v1/events/claude' >/dev/null 2>&1 || true",
+            "async": true,
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -sS -m 2 -H 'X-MCC-Client: 1' -H 'Content-Type: application/json' --data-binary @- 'http://127.0.0.1:8787/v1/events/claude' >/dev/null 2>&1 || true",
+            "async": true,
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -sS -m 2 -H 'X-MCC-Client: 1' -H 'Content-Type: application/json' --data-binary @- 'http://127.0.0.1:8787/v1/events/claude' >/dev/null 2>&1 || true",
+            "async": true,
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -sS -m 2 -H 'X-MCC-Client: 1' -H 'Content-Type: application/json' --data-binary @- 'http://127.0.0.1:8787/v1/events/claude' >/dev/null 2>&1 || true",
+            "async": true,
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -sS -m 2 -H 'X-MCC-Client: 1' -H 'Content-Type: application/json' --data-binary @- 'http://127.0.0.1:8787/v1/events/claude' >/dev/null 2>&1 || true",
+            "async": true,
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -sS -m 2 -H 'X-MCC-Client: 1' -H 'Content-Type: application/json' --data-binary @- 'http://127.0.0.1:8787/v1/events/claude' >/dev/null 2>&1 || true",
+            "async": true,
+            "timeout": 5
           }
         ]
       }

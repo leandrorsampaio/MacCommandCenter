@@ -27,6 +27,34 @@ struct HTTPRequestParsingTests {
         #expect(parsed.query["option"] == "a b")
     }
 
+    /// Hook events carry a tool's whole output, so only event POSTs may be large.
+    @Test func onlyEventPostsGetTheLargerAllowance() {
+        let event = Data("POST /v1/events/claude HTTP/1.1\r\n".utf8)
+        let command = Data("POST /v1/commands/a/toggle HTTP/1.1\r\n".utf8)
+        let read = Data("GET /v1/events/claude HTTP/1.1\r\n".utf8)
+        #expect(HTTPSession.limit(for: event) == HTTPSession.maximumEventSize)
+        #expect(HTTPSession.limit(for: command) == HTTPSession.maximumRequestSize)
+        #expect(HTTPSession.limit(for: read) == HTTPSession.maximumRequestSize)
+        #expect(HTTPSession.limit(for: Data("POST /v1/ev".utf8)) == HTTPSession.maximumRequestSize)
+    }
+
+    @Test func aLargeEventBodyIsReadInFull() throws {
+        let body = String(repeating: "x", count: 300_000)
+        let text =
+            "POST /v1/events/claude HTTP/1.1\r\nContent-Length: \(body.utf8.count)\r\n\r\n" + body
+        let data = Data(text.utf8)
+        #expect(HTTPSession.requiredLength(data) == data.count)
+        let parsed = try #require(HTTPSession.parse(data))
+        #expect(parsed.body.count == 300_000)
+    }
+
+    @Test func aLargeBodyAnywhereElseIsCutToTheSmallAllowance() {
+        let text = "POST /v1/commands/a/toggle HTTP/1.1\r\nContent-Length: 300000\r\n\r\n"
+        let head = Data(text.utf8).count
+        #expect(
+            HTTPSession.requiredLength(Data(text.utf8)) == head + HTTPSession.maximumRequestSize)
+    }
+
     @Test func returnsNilUntilHeadersAreComplete() {
         #expect(request("GET /v1/state HTTP/1.1\r\nHost: x") == nil)
     }

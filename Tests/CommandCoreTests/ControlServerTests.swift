@@ -121,6 +121,67 @@ struct ControlServerTests {
         #expect(readOnly == 200)
     }
 
+    private func post(
+        _ path: String, body: Data, port: UInt16, clientHeader: Bool = true
+    ) async throws -> (Int, String) {
+        var request = URLRequest(url: URL(string: "http://127.0.0.1:\(port)\(path)")!)
+        request.httpMethod = "POST"
+        request.httpBody = body
+        request.timeoutInterval = 5
+        if clientHeader {
+            request.setValue("1", forHTTPHeaderField: ControlServer.clientHeaderName)
+        }
+        let (data, response) = try await URLSession.shared.data(for: request)
+        return (
+            (response as? HTTPURLResponse)?.statusCode ?? 0,
+            String(data: data, encoding: .utf8) ?? ""
+        )
+    }
+
+    /// A hook pipes its input here unchanged; the server passes it on without reading it.
+    @Test func eventsAreHandedOnAsTheyArrived() async throws {
+        let port = freePort()
+        let (_, server) = makeServer(port: port)
+        var received: [(String, Data)] = []
+        server.events = { source, body in received.append((source, body)) }
+        server.start()
+        defer { server.stop() }
+        try await waitUntilRunning(server)
+
+        let payload = Data(#"{"session_id":"s-1","hook_event_name":"Stop"}"#.utf8)
+        let (status, reply) = try await post("/v1/events/claude", body: payload, port: port)
+        #expect(status == 200)
+        #expect(reply.contains("true"))
+        #expect(received.count == 1)
+        #expect(received.first?.0 == "claude")
+        #expect(received.first?.1 == payload)
+
+        // A tool's output can be large.
+        let large = Data(String(repeating: "y", count: 2_000_000).utf8)
+        let (bigStatus, _) = try await post("/v1/events/claude", body: large, port: port)
+        #expect(bigStatus == 200)
+        #expect(received.last?.1.count == 2_000_000)
+    }
+
+    @Test func eventsNeedTheClientHeaderAndAListener() async throws {
+        let port = freePort()
+        let (_, server) = makeServer(port: port)
+        server.start()
+        defer { server.stop() }
+        try await waitUntilRunning(server)
+
+        let (unheard, _) = try await post("/v1/events/claude", body: Data("{}".utf8), port: port)
+        #expect(unheard == 404)
+
+        server.events = { _, _ in Issue.record("a request without the header got through") }
+        let (noHeader, _) = try await post(
+            "/v1/events/claude", body: Data("{}".utf8), port: port, clientHeader: false)
+        #expect(noHeader == 403)
+
+        let (read, _) = try await get("/v1/events/claude", port: port)
+        #expect(read == 405)
+    }
+
     @Test func reportsUnknownRoutesAndOptions() async throws {
         let port = freePort()
         let (_, server) = makeServer(port: port)

@@ -66,6 +66,11 @@ final class HTTPSession {
     private var isFinished = false
 
     static let maximumRequestSize = 64 * 1024
+    /// A hook event carries the tool's whole output, which a large file read makes
+    /// megabytes long. Only event POSTs get this allowance; everything else keeps the
+    /// small one.
+    static let maximumEventSize = 8 * 1024 * 1024
+    static let eventPathPrefix = "/v1/events/"
     /// A client that connects and then says nothing must not hold the session open.
     private static let requestTimeout: TimeInterval = 10
 
@@ -100,19 +105,27 @@ final class HTTPSession {
         finish?(self)
     }
 
+    /// Bytes the whole request needs, known once its headers are in. Checked instead of
+    /// parsing again on every read: a large body arrives in hundreds of reads, and
+    /// searching the growing buffer for the end of the headers each time is quadratic.
+    private var needed: Int?
+
     private func receive() {
-        connection.receive(minimumIncompleteLength: 1, maximumLength: 16 * 1024) {
+        connection.receive(minimumIncompleteLength: 1, maximumLength: 256 * 1024) {
             data, _, isComplete, error in
             if let data, !data.isEmpty {
                 self.buffer.append(data)
             }
 
-            if self.buffer.count > Self.maximumRequestSize {
+            if self.buffer.count > Self.limit(for: self.buffer) {
                 self.finish(with: .failure("Request too large.", status: 413))
                 return
             }
 
-            if let request = Self.parse(self.buffer) {
+            if self.needed == nil { self.needed = Self.requiredLength(self.buffer) }
+            if let needed = self.needed, self.buffer.count >= needed,
+                let request = Self.parse(self.buffer)
+            {
                 self.finish(with: self.handler(request))
                 return
             }
@@ -143,6 +156,42 @@ final class HTTPSession {
 
     private static let headerTerminator = Data("\r\n\r\n".utf8)
 
+    /// The most this request may grow to. Until its request line has arrived nothing can
+    /// claim the larger allowance.
+    static func limit(for data: Data) -> Int {
+        guard let lineEnd = data.range(of: Data("\r\n".utf8)),
+            let line = String(data: data[data.startIndex..<lineEnd.lowerBound], encoding: .utf8)
+        else { return maximumRequestSize }
+        let parts = line.split(separator: " ", maxSplits: 2)
+        guard parts.count >= 2, parts[0].uppercased() == "POST",
+            parts[1].hasPrefix(eventPathPrefix)
+        else { return maximumRequestSize }
+        return maximumEventSize
+    }
+
+    /// Headers plus the declared body, or `nil` while the headers are incomplete.
+    static func requiredLength(_ data: Data) -> Int? {
+        guard let headerEnd = data.range(of: headerTerminator) else { return nil }
+        let head = data.distance(from: data.startIndex, to: headerEnd.upperBound)
+        return head
+            + declaredLength(data[data.startIndex..<headerEnd.lowerBound], limit: limit(for: data))
+    }
+
+    private static func declaredLength(_ headers: Data, limit: Int) -> Int {
+        guard let text = String(data: headers, encoding: .utf8) else { return 0 }
+        for line in text.components(separatedBy: "\r\n").dropFirst() {
+            let pieces = line.split(separator: ":", maxSplits: 1)
+            guard pieces.count == 2,
+                pieces[0].trimmingCharacters(in: .whitespaces).lowercased() == "content-length"
+            else { continue }
+            // A negative value walked the body index off the front of the buffer and
+            // trapped; an absurd one would wait forever. Both are just malformed.
+            let declared = Int(pieces[1].trimmingCharacters(in: .whitespaces)) ?? 0
+            return min(max(declared, 0), limit)
+        }
+        return 0
+    }
+
     /// Returns `nil` while the request is still incomplete.
     static func parse(_ data: Data) -> HTTPRequest? {
         guard let headerEnd = data.range(of: headerTerminator) else { return nil }
@@ -167,10 +216,7 @@ final class HTTPSession {
             headers[pieces[0].trimmingCharacters(in: .whitespaces).lowercased()] =
                 pieces[1].trimmingCharacters(in: .whitespaces)
             if pieces[0].trimmingCharacters(in: .whitespaces).lowercased() == "content-length" {
-                // A negative value walked the body index off the front of the buffer and
-                // trapped; an absurd one would wait forever. Both are just malformed.
-                let declared = Int(pieces[1].trimmingCharacters(in: .whitespaces)) ?? 0
-                contentLength = min(max(declared, 0), maximumRequestSize)
+                contentLength = declaredLength(headerData, limit: limit(for: data))
             }
         }
 

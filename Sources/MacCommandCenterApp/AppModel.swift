@@ -2,10 +2,14 @@ import AppKit
 import AppSupport
 import CommandCore
 import ConfigKit
+import ConsoleKit
+import ConsoleRuntime
 import Foundation
 import Observation
+import PK4Skin
 import ServiceManagement
 import SkinKit
+import TelemetryKit
 
 /// Owns everything long-lived: the command registry, the two catalogs, the control
 /// server and the user's preferences.
@@ -34,19 +38,37 @@ final class AppModel {
     /// Set by the window controllers.
     @ObservationIgnored var requestClose: (() -> Void)?
     @ObservationIgnored var requestSettings: (() -> Void)?
+    @ObservationIgnored var requestConsole: (() -> Void)?
 
     @ObservationIgnored private var refreshTimer: Timer?
+    /// Hook events are parsed here: a PostToolUse carries the tool's whole output.
+    @ObservationIgnored private let hookQueue = DispatchQueue(
+        label: "com.maccommandcenter.hooks", qos: .utility)
+    /// Everything the hooks reported, as readings. The PK-4 console listens here.
+    @ObservationIgnored var hookReadings: (([Reading]) -> Void)?
+
+    /// The PK-4 console, while its window is open. Nothing of it runs otherwise: no
+    /// `claude agents`, no transcript tails, no timer.
+    private(set) var console: PK4Console?
     @ObservationIgnored private var appliedConfig: AppConfig?
 
     private enum Keys {
         static let controlServerEnabled = "controlServerEnabled"
         static let floatsOnTop = "floatsOnTop"
+        static let consoleSound = "consoleSound"
+        static let consoleVolume = "consoleVolume"
+        static let consoleLampCodes = "consoleLampCodes"
+        static let consoleAtLaunch = "consoleAtLaunch"
     }
 
     init() {
         let defaults = UserDefaults.standard
         isControlServerEnabled = defaults.bool(forKey: Keys.controlServerEnabled)
         floatsOnTop = defaults.object(forKey: Keys.floatsOnTop) as? Bool ?? true
+        consoleSound = defaults.object(forKey: Keys.consoleSound) as? Bool ?? true
+        consoleVolume = defaults.object(forKey: Keys.consoleVolume) as? Double ?? 0.8
+        consoleLampCodes = defaults.object(forKey: Keys.consoleLampCodes) as? Bool ?? true
+        openConsoleAtLaunch = defaults.bool(forKey: Keys.consoleAtLaunch)
         launchesAtLogin = SMAppService.mainApp.status == .enabled
 
         server = ControlServer(center: center, signals: signals)
@@ -57,6 +79,10 @@ final class AppModel {
         signals.add(ClaudeCodeSource())
         #endif
         signals.start()
+
+        server.events = { [weak self] source, body in
+            self?.receive(source: source, body: body)
+        }
 
         runtime.consentPrompt = { [weak self] action in
             await self?.requestShellConsent(action) ?? .deny
@@ -109,6 +135,135 @@ final class AppModel {
                 self.observeConfigSelection()
             }
         }
+    }
+
+    // MARK: - PK-4 console
+
+    func openConsole() {
+        guard console == nil else { return }
+        let console = PK4Console(commands: consoleCommands()) { [weak self] in
+            self?.keepAwakeReadings() ?? []
+        }
+        self.console = console
+        hookReadings = { [weak console] readings in console?.ingest(readings) }
+        observeKeepAwake()
+    }
+
+    /// Writes the desk's memory and stops every source. Also called on quit.
+    func closeConsole() {
+        console?.shutDown()
+        console = nil
+        hookReadings = nil
+    }
+
+    /// Everything on the desk that reaches outside it. F1 to F10 are still to be defined,
+    /// and answer nothing.
+    private func consoleCommands() -> ConsoleCommands {
+        var actions: [InstrumentID: CommandAction] = [
+            PK4.fc1: keepAwakeAction(.systemAndDisplay),
+            PK4.fc2: keepAwakeAction(.systemOnly),
+        ]
+        #if !APP_STORE
+        actions[PK4.sleepMode] = SystemCommands.sleepMode()
+        actions[PK4.monitorOff] = SystemCommands.monitorOff()
+        #endif
+        return ConsoleCommands(actions: actions)
+    }
+
+    /// FC1 and FC2 are the two Keep Awake modes of whatever config is selected, found by
+    /// what their buttons do. Looked up when pressed, so switching configs needs nothing.
+    private func keepAwakeAction(_ mode: KeepAwakeMode) -> CommandAction {
+        CommandAction { [weak self] _, reply in
+            guard let self, let option = configs.current.keepAwakeOption(mode) else {
+                reply(false)
+                return
+            }
+            do {
+                try center.perform(.toggle(optionID: option.option), on: CommandID(option.command))
+            } catch {
+                reply(false)
+                return
+            }
+            // The registry's new state is the answer, reported as a reading — on the next
+            // turn of the run loop, not from inside the press that asked for it.
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                console?.ingest(keepAwakeReadings())
+            }
+        }
+    }
+
+    /// Which Keep Awake mode is on, for FC1's and FC2's lenses. A config without that mode
+    /// reports nothing, and those lenses stay dark.
+    private func keepAwakeReadings() -> [Reading] {
+        let now = Date()
+        let modes: [(KeepAwakeMode, Field)] = [
+            (.systemAndDisplay, .keepAwakeDisplayOn), (.systemOnly, .keepAwakeDisplayOff),
+        ]
+        return modes.compactMap { mode, field in
+            guard let option = configs.current.keepAwakeOption(mode) else { return nil }
+            let active =
+                center.state(for: CommandID(option.command)).activeOptionID == option.option
+            return Reading(.machine, field, .flag(active), at: now, ttl: MachineSource.ttl)
+        }
+    }
+
+    /// Keep Awake switched from the menu bar panel, the CLI or a macro pad shows on the
+    /// console's lenses at once.
+    private func observeKeepAwake() {
+        guard console != nil else { return }
+        withObservationTracking {
+            _ = center.states
+        } onChange: { [weak self] in
+            Task { @MainActor in
+                guard let self, let console = self.console else { return }
+                console.ingest(self.keepAwakeReadings())
+                self.observeKeepAwake()
+            }
+        }
+    }
+
+    // MARK: - Hook events
+
+    private func receive(source: String, body: Data) {
+        guard source == "claude" else { return }
+        hookQueue.async {
+            let readings = ClaudeHooks.readings(from: body, at: Date())
+            guard !readings.isEmpty else { return }
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated { self.apply(readings) }
+            }
+        }
+    }
+
+    /// The hooks used to push `claude.waiting`, `claude.done` and `claude.agent` one
+    /// curl at a time. They now send their whole event instead, so the same three
+    /// signals are derived here and every skin that binds to them keeps working.
+    private func apply(_ readings: [Reading]) {
+        for reading in readings {
+            switch reading.field {
+            case .waiting:
+                push("claude.waiting", "Waiting", ttl: 1800)
+            case .turnDone:
+                push("claude.done", "Done", ttl: 1800)
+                signals.clear(id: "claude.waiting")
+            case .agentDone:
+                push("claude.agent", "Agent", ttl: 900)
+            case .promptSubmitted:
+                signals.clear(id: "claude.waiting")
+                signals.clear(id: "claude.done")
+            case .toolUsed:
+                // A tool ran, so a permission it was waiting on has been granted.
+                signals.clear(id: "claude.waiting")
+            default:
+                break
+            }
+        }
+        hookReadings?(readings)
+    }
+
+    private func push(_ id: String, _ label: String, ttl: TimeInterval) {
+        signals.push(id: id, label: label, fraction: nil, text: nil, isActive: true, ttl: ttl)
     }
 
     // MARK: - Shell consent
@@ -188,6 +343,42 @@ final class AppModel {
     }
 
     @ObservationIgnored var floatingLevelDidChange: ((Bool) -> Void)?
+
+    // Console preferences that belong to whoever is looking, not to the desk: the desk's
+    // own — its finish, the buzzer — live in its memory with everything else it keeps.
+
+    var consoleSound: Bool {
+        didSet {
+            UserDefaults.standard.set(consoleSound, forKey: Keys.consoleSound)
+            consoleSoundDevice?.isEnabled = consoleSound
+        }
+    }
+
+    var consoleVolume: Double {
+        didSet {
+            UserDefaults.standard.set(consoleVolume, forKey: Keys.consoleVolume)
+            consoleSoundDevice?.volume = Float(consoleVolume)
+        }
+    }
+
+    /// Whether lamp windows carry their HL designators.
+    var consoleLampCodes: Bool {
+        didSet { UserDefaults.standard.set(consoleLampCodes, forKey: Keys.consoleLampCodes) }
+    }
+
+    /// For a console that lives full screen on a second display. Also readable as a
+    /// one-off launch argument, `-consoleAtLaunch YES`, which is not saved.
+    var openConsoleAtLaunch: Bool {
+        didSet { UserDefaults.standard.set(openConsoleAtLaunch, forKey: Keys.consoleAtLaunch) }
+    }
+
+    @ObservationIgnored private weak var consoleSoundDevice: PK4Sound?
+
+    func applyConsoleSoundSettings(to sound: PK4Sound) {
+        consoleSoundDevice = sound
+        sound.isEnabled = consoleSound
+        sound.volume = Float(consoleVolume)
+    }
 
     var isLaunchAtLoginSupported: Bool {
         Bundle.main.bundleURL.pathExtension == "app"

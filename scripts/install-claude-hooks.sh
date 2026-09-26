@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 #
-# Point Claude Code's hooks at Mac Command Center, so the panel lights up when a run
-# finishes or stops to ask you something.
+# Point Claude Code's hooks at Mac Command Center, so the panel and the PK-4 console hear
+# what happens the moment it happens: a session starting and ending, a turn finishing, a
+# subagent starting and stopping, a permission prompt, a tool finishing, a compaction.
 #
-# Reading `~/.claude` tells the panel what is *true* — how full the context is, what a
+# Reading `~/.claude` tells the app what is *true* — how full the context is, what a
 # session costs, whether one is working. It cannot tell it what just *happened*: "this
 # finished" and "this is waiting for you" leave no trace on disk. Those are hooks.
 #
@@ -11,8 +12,15 @@
 #   scripts/install-claude-hooks.sh --install  # write it
 #   scripts/install-claude-hooks.sh --remove   # take it back out
 #
-# The control API must be on: Settings ▸ Advanced ▸ Enable the local control API. It is
-# off by default and binds to 127.0.0.1 only.
+# Every hook is the same line: it pipes the hook's JSON input to the local control API.
+# They are `async`, so Claude Code never waits for them, and best-effort, so a closed app
+# costs a session nothing. The control API must be on for them to arrive: Settings ▸
+# Advanced ▸ Enable the local control API. It is off by default and binds to 127.0.0.1
+# only.
+#
+# Re-running replaces what an earlier version of this script installed, including the
+# four single-signal hooks it used to write, and leaves every hook you wrote yourself
+# exactly where it is.
 
 set -euo pipefail
 
@@ -34,70 +42,83 @@ if ! command -v python3 >/dev/null 2>&1; then
 fi
 
 case "$MODE" in
---show)
-    echo "Would merge these hooks into $SETTINGS:"
-    echo
-    python3 -c "
-import json, sys
-snippet = json.load(open('$SNIPPET'))
-print(json.dumps({'hooks': snippet['hooks']}, indent=2))
-"
-    echo
-    echo "Run with --install to write it, --remove to take it out."
+--show | --install | --remove) ;;
+*)
+    echo "Usage: $(basename "$0") [--show | --install | --remove]" >&2
+    exit 2
     ;;
+esac
 
---install | --remove)
-    python3 - "$SNIPPET" "$SETTINGS" "$MODE" <<'PY'
+python3 - "$SNIPPET" "$SETTINGS" "$MODE" <<'PY'
 import json, os, shutil, sys
 
 snippet_path, settings_path, mode = sys.argv[1:4]
-hooks = json.load(open(snippet_path))["hooks"]
+ours = json.load(open(snippet_path))["hooks"]
 
 settings = {}
 if os.path.exists(settings_path):
     with open(settings_path) as handle:
         settings = json.load(handle)
-    # Settings are hand-edited and hard to reconstruct; never write without a copy.
-    shutil.copy2(settings_path, settings_path + ".mcc-backup")
-
 existing = settings.get("hooks", {})
-marker = "/v1/signals/claude."
 
-for event, groups in hooks.items():
-    # Drop any group this script installed before, so re-running does not stack them up,
-    # and leave every hook the user wrote themselves exactly where it is.
-    kept = [
-        group for group in existing.get(event, [])
-        if not any(marker in hook.get("command", "") for hook in group.get("hooks", []))
-    ]
-    if mode == "--install":
-        kept += groups
+# What this script has ever installed: the four single-signal hooks of the first version,
+# and the one event hook of this one.
+markers = ("/v1/signals/claude.", "/v1/events/claude")
+
+def is_ours(group):
+    return any(
+        any(marker in hook.get("command", "") for marker in markers)
+        for hook in group.get("hooks", [])
+    )
+
+merged = {}
+changes = []
+for event in sorted(set(existing) | set(ours)):
+    groups = existing.get(event, [])
+    kept = [group for group in groups if not is_ours(group)]
+    had_ours = len(kept) != len(groups)
+    if mode != "--remove" and event in ours:
+        kept += ours[event]
+        changes.append(("replace" if had_ours else "add", event))
+    elif had_ours:
+        changes.append(("remove", event))
     if kept:
-        existing[event] = kept
-    else:
-        existing.pop(event, None)
+        merged[event] = kept
 
-if existing:
-    settings["hooks"] = existing
+if mode == "--show":
+    if not changes:
+        print(f"Nothing to change in {settings_path}.")
+    else:
+        print(f"Would change {settings_path}:")
+        for verb, event in changes:
+            print(f"  {verb:8} {event}")
+        print()
+        print("Each hook runs, in the background:")
+        print("  " + next(iter(ours.values()))[0]["hooks"][0]["command"])
+        print()
+        print("Hooks you wrote yourself are left as they are.")
+        print("Run with --install to write it, --remove to take it out.")
+    sys.exit(0)
+
+if merged:
+    settings["hooks"] = merged
 else:
     settings.pop("hooks", None)
 
 os.makedirs(os.path.dirname(settings_path), exist_ok=True)
+if os.path.exists(settings_path):
+    # Settings are hand-edited and hard to reconstruct; never write without a copy.
+    shutil.copy2(settings_path, settings_path + ".mcc-backup")
 with open(settings_path, "w") as handle:
     json.dump(settings, handle, indent=2)
     handle.write("\n")
 
 verb = "Installed" if mode == "--install" else "Removed"
 print(f"{verb} Mac Command Center hooks in {settings_path}")
+for verb, event in changes:
+    print(f"  {verb:8} {event}")
 if os.path.exists(settings_path + ".mcc-backup"):
     print(f"Previous settings kept at {settings_path}.mcc-backup")
+print()
+print("Restart any running Claude Code session to pick the change up.")
 PY
-    echo
-    echo "Restart any running Claude Code session to pick the change up."
-    ;;
-
-*)
-    echo "Usage: $(basename "$0") [--show | --install | --remove]" >&2
-    exit 2
-    ;;
-esac

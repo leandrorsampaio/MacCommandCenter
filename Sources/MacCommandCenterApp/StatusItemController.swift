@@ -12,6 +12,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     private let statusItem: NSStatusItem
     private let panel: FloatingPanelController
     private let settings: SettingsWindowController
+    private let consoleWindow: ConsoleWindowController
 
     init(model: AppModel) {
         self.model = model
@@ -21,6 +22,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
             floatsOnTop: model.floatsOnTop
         )
         self.settings = SettingsWindowController(model: model)
+        self.consoleWindow = ConsoleWindowController(model: model)
         super.init()
 
         if let button = statusItem.button {
@@ -32,6 +34,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
         model.requestClose = { [weak self] in self?.panel.hide() }
         model.requestSettings = { [weak self] in self?.settings.show() }
+        model.requestConsole = { [weak self] in self?.consoleWindow.show() }
         model.floatingLevelDidChange = { [weak self] floats in self?.panel.setFloatsOnTop(floats) }
 
         updateIcon()
@@ -80,6 +83,12 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         float.state = model.floatsOnTop ? .on : .off
         menu.addItem(float)
 
+        let console = NSMenuItem(
+            title: consoleWindow.isOpen ? "Close PK-4 Console" : "Open PK-4 Console",
+            action: #selector(menuConsole), keyEquivalent: "")
+        console.target = self
+        menu.addItem(console)
+
         menu.addItem(.separator())
 
         let settingsItem = NSMenuItem(
@@ -108,6 +117,9 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     @objc private func menuTogglePanel() { togglePanel(activating: true) }
     @objc private func menuToggleFloat() { model.floatsOnTop.toggle() }
     @objc private func menuSettings() { settings.show() }
+    @objc private func menuConsole() {
+        consoleWindow.isOpen ? consoleWindow.close() : consoleWindow.show()
+    }
     @objc private func menuQuit() { model.quit() }
 
     @objc private func menuReload() {

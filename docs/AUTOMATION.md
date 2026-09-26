@@ -123,6 +123,7 @@ ANY  /v1/commands/{id}/toggle?option={optionID}         needs the header
 ANY  /v1/commands/{id}/deactivate                       needs the header
 ANY  /v1/signals/{id}?text=…&fraction=…&active=…&ttl=…  needs the header
 ANY  /v1/signals/{id}?clear=1                           needs the header
+POST /v1/events/{source}      a tool's own JSON event   needs the header
 ```
 
 Anything that changes state must send `X-MCC-Client` and must not send `Origin`:
@@ -181,14 +182,29 @@ scripts/install-claude-hooks.sh --install  # write it
 scripts/install-claude-hooks.sh --remove   # take it back out
 ```
 
-That adds four hooks to `~/.claude/settings.json`, each one `curl` into the control API:
-`Stop` lights `claude.done`, `Notification` lights `claude.waiting`, `SubagentStop` lights
-`claude.agent`, and `UserPromptSubmit` clears the first two. Your own hooks are left where
-they are, re-running does not stack them up, and the previous settings are kept alongside
-as `settings.json.mcc-backup`.
+That adds one hook to each of twelve events in `~/.claude/settings.json` — SessionStart,
+SessionEnd, UserPromptSubmit, Stop, SubagentStart, SubagentStop, Notification,
+PermissionRequest, PostToolUse, PostToolUseFailure, PreCompact and PostCompact. Every one
+is the same line: it pipes the hook's own JSON input to `POST /v1/events/claude`.
 
-Every call is best-effort — `-m 2` and `|| true` — so a closed panel or a control API
-switched off costs the hook nothing.
+```bash
+curl -sS -m 2 -H 'X-MCC-Client: 1' -H 'Content-Type: application/json' \
+  --data-binary @- 'http://127.0.0.1:8787/v1/events/claude' >/dev/null 2>&1 || true
+```
+
+The hooks are `async`, so Claude Code never waits for them, and best-effort — `-m 2` and
+`|| true` — so a closed panel or a control API switched off costs a session nothing. The
+app reads the session, the event and little else; the prompt you typed is looked at only
+to tell it from one Claude Code wrote itself, and is never kept. A tool's output can run
+to megabytes, so event posts may be up to 8 MB; every other request keeps the 64 KB limit.
+
+From those events the app still derives `claude.waiting`, `claude.done` and
+`claude.agent`, so a skin bound to them works as before. Waiting lights only for
+notifications that need you — a permission prompt, an idle prompt, a question — and a
+tool running clears it, because that is what granting a permission in the terminal looks
+like. Your own hooks are left where they are, re-running does not stack them up (it also
+replaces the four single-signal hooks earlier versions installed), and the previous
+settings are kept alongside as `settings.json.mcc-backup`.
 
 **Pushing your own.** Nothing about this is specific to Claude Code. Any script can report
 into the panel:

@@ -32,6 +32,12 @@ public final class ControlServer {
     @ObservationIgnored private let center: CommandCenter
     @ObservationIgnored private let signals: SignalCenter?
 
+    /// Receives `POST /v1/events/{source}`: a tool's own event, exactly as it sent it —
+    /// today Claude Code's hooks, which pipe their input straight here. The server knows
+    /// nothing about what is inside; the body can run to megabytes, so whoever listens
+    /// should read it off the main thread.
+    @ObservationIgnored public var events: (@MainActor (_ source: String, _ body: Data) -> Void)?
+
     public init(
         center: CommandCenter,
         signals: SignalCenter? = nil,
@@ -157,6 +163,19 @@ public final class ControlServer {
             }
             return guardFailure
 
+        // A hook reporting what just happened, in its own words. Same guard as a command:
+        // it changes what the console shows.
+        case let parts where parts.count == 3 && parts[0] == "v1" && parts[1] == "events":
+            if let failure = Self.mutationGuard(request) { return failure }
+            guard request.method == "POST" else {
+                return .failure("Events are sent with POST.", status: 405)
+            }
+            guard let events else {
+                return .failure("Nothing is listening for events.", status: 404)
+            }
+            events(parts[2], request.body)
+            return .json(EventReceipt())
+
         case let parts where parts.count == 4 && parts[0] == "v1" && parts[1] == "commands":
             let id = CommandID(parts[2])
             let verb = parts[3]
@@ -231,10 +250,16 @@ public final class ControlServer {
           ANY  /v1/commands/{id}/deactivate
           GET  /v1/signals
           ANY  /v1/signals/{id}?text=...&fraction=...&active=1&ttl=60
+          POST /v1/events/{source}          (a hook's JSON input, as the body)
 
         Example:
           curl "http://127.0.0.1:\(port)/v1/commands/keep-awake/activate?option=display-off"
 
         """
     }
+}
+
+/// What an event gets back. JSON, because a hook that reads its reply expects it.
+private struct EventReceipt: Encodable {
+    let ok = true
 }
