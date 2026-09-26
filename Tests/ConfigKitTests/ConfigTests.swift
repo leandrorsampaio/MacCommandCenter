@@ -353,3 +353,23 @@ struct DuplicateIDTests {
         #expect(problems[0].contains("'one'"))
     }
 }
+
+@Suite struct KeepAwakeLookupTests {
+
+    /// FC1 and FC2 on the PK-4 console switch these two modes, wherever a config puts them.
+    @Test func findsEachModeByWhatTheButtonDoes() {
+        let config = AppConfig.standard
+        let displayOn = config.keepAwakeOption(.systemAndDisplay)
+        let displayOff = config.keepAwakeOption(.systemOnly)
+        #expect(displayOn != nil)
+        #expect(displayOff != nil)
+        #expect(displayOn?.command == displayOff?.command)
+        #expect(displayOn?.option != displayOff?.option)
+    }
+
+    @Test func aConfigWithoutKeepAwakeHasNone() {
+        var config = AppConfig.standard
+        config.groups = []
+        #expect(config.keepAwakeOption(.systemAndDisplay) == nil)
+    }
+}

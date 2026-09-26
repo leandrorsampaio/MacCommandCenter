@@ -8,6 +8,38 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- **PK-4, a second front end for Claude Code**: a 1972 operator desk for watching up to
+  four sessions at once. Open it from the menu bar. It has an annunciator per session,
+  nixie readouts, moving-coil meters and drum counters for the selected one, and guarded
+  keys for anything disruptive. Every lamp answers the machine, never the finger. An
+  alarm flashes and buzzes until it is acknowledged, then burns steady until its cause
+  clears. A source that stops reporting goes dark and raises DATA STALE instead of showing
+  its last answer. Drum totals, the pencilled project names, the finish and the
+  hours in service survive a restart. Every command is written to a safety log.
+  Keyboard and VoiceOver reach every control, panel by panel, A to E.
+
+  The desk has its own model, with no views in it, under the same rules as the rest of
+  the app: `TelemetryKit` reads, `ConsoleKit` decides, `PK4Skin` draws, and
+  `ConsoleRuntime` is the edge that touches files and processes. The design is by
+  another hand and is followed to the letter; the architecture is this project's.
+- **The routine keys do something.** F1 opens the selected session's folder, F2 opens
+  Terminal there, F3 copies the command that resumes it, F4 shows the safety log and F5
+  reveals its transcript. F10, under a guard and a key, ends the session with `SIGTERM`.
+  It checks first that the pid still belongs to that session. It lights only once the
+  session is seen to be gone. F6 to F9 are left unassigned. Freezing a session with
+  `SIGSTOP` looked right for two of them and is not: `SIGCONT` resumes a terminal's job in
+  the background, where it stops again at the first key.
+- **The console keeps running with its window closed** once it has been opened, so its
+  totals count what happened while nobody was looking. It costs a fraction of a percent
+  of one core, and Settings › Console turns it off.
+- **A scripted day** (Settings › Console) plays in place of Claude Code, starting at 08:55
+  so there is something to see at once. It keeps its own totals and log. Its buttons reach
+  nothing outside the desk except Keep Awake.
+- **`POST /v1/events/{source}`**: the hooks now send Claude Code's whole event, up to
+  8 MB, instead of one curl per lamp. The installer covers twelve events and replaces
+  the old hooks rather than adding to them. Settings › Console shows when the last event
+  arrived, and says so when the control API is off and nothing can arrive.
+
 - **Signals: things the panel watches rather than switches.** A command has an owner that
   can be told to change state; a signal has a source that reports it and nothing the panel
   can do about it. One signal carries a fraction for a needle, a line of text for a
@@ -38,6 +70,12 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- **One reader of `~/.claude`**, shared by the panel's `claude.*` signals and the console.
+  Presence comes from `claude agents --json`, the only authority on which sessions are
+  alive. It runs when a session or job file changes, and every thirty seconds as a safety
+  net, instead of on a timer. The reader runs only while something shows what it reads:
+  a skin that binds a `claude.` signal, or the console with MAINS on. The rest of the time
+  `/v1/signals` does not list those five. `ClaudeCodeSource` is gone.
 - **The Reactor Control skin is now "RBMK Mac Control Panel"**, nameplate included
   (`РБМК · Пульт управления` over `RBMK Mac Control Panel · БЩУ-1`), and its folder is
   `Skins/RBMK.mccskin`. The skin id is unchanged, so an existing selection survives.

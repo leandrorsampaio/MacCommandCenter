@@ -1,5 +1,6 @@
 import AppSupport
 import ConfigKit
+import ConsoleKit
 import SwiftUI
 
 struct SettingsView: View {
@@ -16,6 +17,9 @@ struct SettingsView: View {
 
             ConfigsSettingsView(model: model)
                 .tabItem { Label("Configs", systemImage: "square.grid.2x2") }
+
+            ConsoleSettingsView(model: model)
+                .tabItem { Label("Console", systemImage: "rectangle.3.group") }
 
             AdvancedSettingsView(model: model)
                 .tabItem { Label("Advanced", systemImage: "slider.horizontal.3") }
@@ -190,6 +194,123 @@ struct AdvancedSettingsView: View {
                 }
             } header: {
                 Text("Files")
+            }
+        }
+        .formStyle(.grouped)
+    }
+}
+
+// MARK: - Console
+
+/// The PK-4 console's preferences. The finish and the buzzer belong to the desk and are
+/// kept in its memory, so they can be changed only while it is running; sound, volume and
+/// lamp codes belong to whoever is looking.
+struct ConsoleSettingsView: View {
+
+    let model: AppModel
+
+    private var host: ConsoleHost { model.consoleHost }
+
+    var body: some View {
+        Form {
+            Section {
+                if let console = host.console {
+                    Picker(
+                        "Panel finish",
+                        selection: Binding(
+                            get: { console.model.snapshot.finish },
+                            set: { console.model.setFinish($0) })
+                    ) {
+                        Text("Grey-green enamel").tag(Finish.greyGreen)
+                        Text("Ivory enamel").tag(Finish.ivory)
+                        Text("Matte graphite").tag(Finish.graphite)
+                    }
+                    Toggle(
+                        "Buzzer muted",
+                        isOn: Binding(
+                            get: { console.model.buzzerMuted },
+                            set: { console.model.setBuzzerMuted($0) }))
+                    Text("A muted buzzer never mutes the flash.")
+                        .font(.caption).foregroundStyle(.secondary)
+                } else {
+                    LabeledContent("The console is not running") {
+                        Button("Open PK-4 Console") { model.requestConsole?() }
+                    }
+                    Text(
+                        "Its finish and buzzer are kept with the desk, and change while it runs."
+                    )
+                    .font(.caption).foregroundStyle(.secondary)
+                }
+            } header: {
+                Text("Desk")
+            }
+
+            Section {
+                Toggle(
+                    "Keep the console running when its window is closed",
+                    isOn: Binding(get: { host.keepRunning }, set: { host.keepRunning = $0 }))
+                Toggle(
+                    "Play a scripted day instead of reading Claude Code",
+                    isOn: Binding(get: { host.demo }, set: { host.demo = $0 }))
+            } header: {
+                Text("Running")
+            } footer: {
+                Text(
+                    "Running behind a closed window, the drum counters and hours in service keep counting; it costs a fraction of a percent of one core. The scripted day keeps its own totals and log, and its buttons reach nothing outside the desk but Keep Awake."
+                )
+                .font(.caption).foregroundStyle(.secondary)
+            }
+
+            Section {
+                LabeledContent("Last hook event") {
+                    if let last = host.lastHookEvent {
+                        Text(last, style: .relative) + Text(" ago")
+                    } else {
+                        Text("None since the app started").foregroundStyle(.secondary)
+                    }
+                }
+                if !model.isControlServerEnabled {
+                    Label(
+                        "The control API is off, so hook events have nowhere to arrive. Turn it on under Advanced.",
+                        systemImage: "exclamationmark.triangle"
+                    )
+                    .foregroundStyle(.orange)
+                }
+            } header: {
+                Text("Claude Code hooks")
+            } footer: {
+                Text(
+                    "WAITING, TURN DONE and AGENT DONE are lit by hooks and nothing else. Without them the console still sees every session and its numbers. Install them with scripts/install-claude-hooks.sh --install."
+                )
+                .font(.caption).foregroundStyle(.secondary)
+            }
+
+            Section {
+                Toggle(
+                    "Sound",
+                    isOn: Binding(get: { model.consoleSound }, set: { model.consoleSound = $0 }))
+                Slider(
+                    value: Binding(get: { model.consoleVolume }, set: { model.consoleVolume = $0 }),
+                    in: 0...1
+                ) {
+                    Text("Volume")
+                }
+                .disabled(!model.consoleSound)
+                Toggle(
+                    "Show designators on lamp windows",
+                    isOn: Binding(
+                        get: { model.consoleLampCodes }, set: { model.consoleLampCodes = $0 }))
+                Toggle(
+                    "Open the console when the app starts",
+                    isOn: Binding(
+                        get: { model.openConsoleAtLaunch }, set: { model.openConsoleAtLaunch = $0 })
+                )
+            } header: {
+                Text("Viewing")
+            } footer: {
+                Text(
+                    "Night lighting follows the Mac's appearance. Reduce Motion and Increase Contrast are honoured."
+                )
             }
         }
         .formStyle(.grouped)

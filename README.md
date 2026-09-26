@@ -87,6 +87,39 @@ files Claude Code already writes; the last two are pushed by hooks, installed wi
 `scripts/install-claude-hooks.sh`. →
 **[docs/AUTOMATION.md](docs/AUTOMATION.md#watching-claude-code)**
 
+## The PK-4 console
+
+For watching several Claude Code sessions at once there is a second front end: **PK-4**, a
+1972 operator desk with an annunciator per session, nixie readouts, moving-coil meters,
+drum counters and guarded keys. Open it from the menu bar — **Open PK-4 Console** — and
+give it a display of its own: it is one fixed drawing, locked to its aspect ratio, and
+happiest full screen.
+
+It reads what Claude Code writes in `~/.claude` (direct download only) and, with the
+hooks installed, hears every session start, finish, wait and compaction as it happens.
+The lamps answer the machine, never the finger. Alarms flash and sound until they are
+acknowledged. A source that stops reporting goes dark and raises DATA STALE. Its memory
+and its safety log live in `Application Support/MacCommandCenter/PK-4/`. Once opened, it
+goes on counting behind a closed window at a fraction of a percent of one core; Settings
+› Console turns that off, and plays a scripted day for a demo.
+
+<p align="center">
+  <img src="docs/images/panel-pk4.jpg" width="880" alt="The PK-4 console at 09:05 on the scripted day">
+</p>
+
+| Key | Does |
+|---|---|
+| F1 | Opens the selected session's folder |
+| F2 | Opens Terminal there |
+| F3 | Copies `cd … && claude --resume …` |
+| F4 | Shows the safety log |
+| F5 | Reveals the transcript |
+| F10 | Ends the session (guard, key, hold 2 s) |
+
+F6 to F9 are unassigned on purpose. PRT writes the selected session's readings to a text
+log. SLEEP MODE and MONITOR OFF are what they say. FC1 and FC2 are your config's two Keep
+Awake modes.
+
 A config is a `.mccconfig` folder that decides which buttons exist, what they say and what
 they do: keep awake, open a URL, or run a shell command. Build one in **Settings › Configs**
 or edit the JSON. → **[docs/CONFIGS.md](docs/CONFIGS.md)**
@@ -140,7 +173,7 @@ needs **no code at all** — see **[docs/AUTOMATION.md](docs/AUTOMATION.md)**.
 ## Development
 
 ```bash
-swift test      # 56 tests, all offline
+swift test      # all offline; PK4_LIVE=1 and PK4_RENDER=<dir> opt into the rest
 swift build -c release
 ```
 

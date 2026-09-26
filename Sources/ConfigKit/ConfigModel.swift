@@ -129,3 +129,28 @@ public struct ConfigOption: Sendable, Equatable, Identifiable {
         self.role = role
     }
 }
+
+// MARK: - Keep Awake
+
+/// Where a config keeps one Keep Awake mode: which command, which of its options.
+public struct KeepAwakeOption: Sendable, Equatable {
+    public var command: String
+    public var option: String
+}
+
+extension AppConfig {
+
+    /// The first option whose action holds this Keep Awake mode, or `nil` when the config
+    /// has none. Looked up by what the button does rather than by its id: a config is free
+    /// to call its buttons anything.
+    public func keepAwakeOption(_ mode: KeepAwakeMode) -> KeepAwakeOption? {
+        for group in groups {
+            for command in group.commands {
+                for option in command.options where option.action == .keepAwake(mode: mode) {
+                    return KeepAwakeOption(command: command.id, option: option.id)
+                }
+            }
+        }
+        return nil
+    }
+}

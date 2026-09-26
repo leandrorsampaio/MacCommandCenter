@@ -17,9 +17,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.statusItem.togglePanel(activating: true)
         }
         model.isHotKeyRegistered = (hotKey != nil)
+
+        if model.openConsoleAtLaunch {
+            model.requestConsole?()
+        } else {
+            model.consoleHost.startIfItWasRunning()
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        model?.consoleHost.close()
         model?.center.deactivateAll()
         model?.server.stop()
     }

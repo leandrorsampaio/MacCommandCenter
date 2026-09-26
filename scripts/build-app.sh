@@ -65,6 +65,8 @@ fi
 [[ -f "$ROOT/Resources/AppIcon.icns" ]] && cp "$ROOT/Resources/AppIcon.icns" "$APP/Contents/Resources/"
 [[ -d "$ROOT/Skins" ]] && cp -R "$ROOT/Skins" "$APP/Contents/Resources/Skins"
 [[ -d "$ROOT/Configs" ]] && cp -R "$ROOT/Configs" "$APP/Contents/Resources/Configs"
+# The PK-4 console's five faces, with their licences. Registered for this app only.
+[[ -d "$ROOT/Resources/Fonts" ]] && cp -R "$ROOT/Resources/Fonts" "$APP/Contents/Resources/Fonts"
 
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
